@@ -20,6 +20,12 @@ prev_messages = []
 users_allowed = ("Yelov#5021", "Averso#5633", "jozko#1351", "AltheaZ0rg#8216")
 song_queue = []
 current_song = ''
+keys = {}
+with open("ClientKey.txt") as f:
+    for line in f:
+        line = line[:-1]
+        key, val = line.split()
+        keys[key] = val
 
 @slash.slash(description='example: 1 hour 5 minutes <message> /repeat/')
 async def remind(ctx, *, string):
@@ -665,7 +671,7 @@ async def text(message, filename=''):
 
 @slash.slash(description='You can specify with argument, e.g. "temperature", "humidity", ..')
 async def weather(ctx, *, specify=''):
-    owm = OWM('f78ef33afde47a7693ad5d7a320f7ca2')
+    owm = OWM(keys['owm'])
     mgr = owm.weather_manager()
     info = {}
     if specify and specify.split()[0] == 'in':
@@ -1354,7 +1360,7 @@ async def aigenerate(ctx, *, prompt):
             mssgs.append(text)
         return mssgs
 
-    openai.api_key = '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'
+    openai.api_key = keys['openai']
     await ctx.send("brb, generating...")
     response = openai.Completion.create(
         engine='davinci',
@@ -1385,7 +1391,7 @@ async def aigenerate(ctx, *, prompt):
 async def aianswer(ctx, *, prompt):
     if not prompt[0].isupper():
         prompt = prompt[0].capitalize() + prompt[1:]
-    openai.api_key = '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'
+    openai.api_key = keys['openai']
     response = openai.Completion.create(
         engine='davinci-instruct-beta',
         prompt=prompt,
@@ -1401,7 +1407,7 @@ async def aianswer(ctx, *, prompt):
 
 @client.command(pass_context=True)
 async def aicode(ctx, *, prompt):
-    openai.api_key = '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'
+    openai.api_key = keys['openai']
     response = openai.Completion.create(
         engine='davinci-instruct-beta',
         prompt=prompt,
