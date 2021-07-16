@@ -8,4 +8,4 @@ async def on_ready():
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=activity_name))
 
 with open('ClientKey.txt') as f:
-    client.run(f.read())
+    client.run(keys['client'])
