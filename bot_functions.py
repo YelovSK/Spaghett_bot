@@ -1,4 +1,4 @@
-import discord, time, random, asyncio, praw, urllib.request, time, shelve, os, youtube_dl, spotipy, re, math, openai
+import discord, time, random, asyncio, praw, urllib.request, time, shelve, os, youtube_dl, spotipy, re, math, openai, sys, contextlib
 from spotipy.oauth2 import SpotifyClientCredentials
 from youtubesearchpython import *
 from decimal import *
@@ -9,7 +9,7 @@ from pyowm.owm import OWM
 from datetime import timezone
 from pathlib import Path
 from PyDictionary import PyDictionary
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from io import StringIO
 
 from help import *
 
@@ -26,6 +26,16 @@ with open("ClientKey.txt") as f:
         line = line[:-1]
         key, val = line.split()
         keys[key] = val
+
+def splitLong(text):
+    mssgs = []
+    for _ in range((len(text)//2000) + 1):
+        mssgs.append(text[:2000])
+        text = text[2000:]
+    if text:
+        mssgs.append(text)
+    return mssgs
+
 
 @slash.slash(description='example: 1 hour 5 minutes <message> /repeat/')
 async def remind(ctx, *, string):
@@ -771,8 +781,10 @@ async def answer(message, *, question):
     answers = (yes, maybe, no)
     await message.send(f"****{auth}:**** {question}\n****Answer:**** {random.choice(random.choice(answers))}")
 
-@slash.slash(description='Random journal entry. Can specify with "year/month".')
-async def journal(message, find='', additional=None):
+# @client.command(pass_context=True)
+@slash.slash(description='Random entry if no argument. <word> - word to find, <additional> - "count" / "allinfo"')
+async def journal(message, word='', additional=None):
+
     class Journal:
 
         def __init__(self):
@@ -866,14 +878,10 @@ async def journal(message, find='', additional=None):
             out += f'**🡒 WORD FOUND IN:** {round(find_time, 2)}s\n🡒 **TOTAL TIME (incl. dictionary):** {round(self.time, 2)}s'
             return out
 
-    def splitLong(text):
-        mssgs = []
-        for _ in range((len(text)//2000) + 1):
-            mssgs.append(text[:2000])
-            text = text[2000:]
-        if text:
-            mssgs.append(text)
-        return mssgs
+        def random_entry(self):
+            files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
+            with open(self.path+"\\"+random.choice(files), 'r', encoding='utf-8') as f:
+                return f.read()
 
     if str(message.author)[:str(message.author).find("#")] != 'Yelov':
         await message.send("Ain't your journal bro")
@@ -885,10 +893,14 @@ async def journal(message, find='', additional=None):
 
     jour = Journal()
     if additional == "count":
-        jour.find_word(find)
-        prev_messages.append(await message.send(f'{find} found {jour.count} times'))
+        jour.find_word(word)
+        prev_messages.append(await message.send(f'{word} found {jour.count} times'))
         return
-    journal_text += f'{jour.find_word(find)}'
+    if word:
+        print("trying to find", word)
+        journal_text += f'{jour.find_word(word)}'
+    else:
+        journal_text += jour.random_entry()
     if additional == "allinfo":
         journal_text += f'\nAll words count: {jour.total_word_count(False)}\n'
         journal_text += f'Unique words count: {jour.total_word_count(True)}\n'
@@ -1336,11 +1348,30 @@ async def maths(ctx, *, action):
     await ctx.send(f'{orig} → {num}')
 
 @client.command(pass_context=True)
-async def execute(ctx, *, code):
-    try:
-        await ctx.send(exec(code))
-    except:
-        await ctx.send("Invalid code or did not return a value")
+async def execute(ctx, *, code=''):
+    @contextlib.contextmanager
+    def stdoutIO(stdout=None):
+        old = sys.stdout
+        if stdout is None:
+            stdout = StringIO()
+        sys.stdout = stdout
+        yield stdout
+        sys.stdout = old
+
+    if len(code.split('```')) != 3:
+        await ctx.send("Write your code like this:\n> plz execute\n> \```\n> print('test')\n> \```")
+        return
+    code = code.split('```')[1]
+
+    with stdoutIO() as s:
+        try:
+            exec(code)
+            if not s.getvalue():
+                await ctx.send("Didn't print anything")
+            else:
+                await ctx.send(s.getvalue())
+        except:
+            await ctx.send("Invalid code")
 
 @client.command(pass_context=True)
 async def evaluate(ctx, *, code):
@@ -1440,3 +1471,34 @@ async def findword(ctx, where, part):
         await ctx.send("Didn't find any word")
     else:
         await ctx.send(random.choice(output))
+
+@client.command(pass_context=True)
+async def showfunction(ctx, function):
+    global prev_messages
+    out = "```Python\n"
+    started = False
+    finding = f"async def {function}"
+    with open("bot_functions.py", "r") as f:
+        for line in f:
+            if not started and line[:len(finding)] == finding:
+                started = True
+                out += line
+            elif started:
+                if line[0] ==  "@":
+                    out += "\n```"
+                    if len(out) > 2000:
+                        for msg in splitLong(out):
+                            prev_messages.append(await ctx.send(msg))
+                    else:
+                        prev_messages.append(await ctx.send(out))
+                    return
+                else:
+                    out += line
+    if out == "```Python\n":
+        await ctx.send("Function not found")
+    else:
+        if len(out) > 2000:
+            for msg in splitLong(out):
+                prev_messages.append(await ctx.send(msg))
+        else:
+            prev_messages.append(await ctx.send(out))
