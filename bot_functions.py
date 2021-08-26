@@ -36,7 +36,6 @@ def splitLong(text):
         mssgs.append(text)
     return mssgs
 
-
 @slash.slash(description='example: 1 hour 5 minutes <message> /repeat/')
 async def remind(ctx, *, string):
     global stop
@@ -201,23 +200,19 @@ async def image(ctx, img_name='', *, text=''):
 @slash.slash(description='random fap image, can be sent with <folder_name>')
 async def fap(message, *, folder=''):
     if not folder:
-        folders = []
         with open("text/fap.txt", 'r') as f:
-            for line in f:
-                folders.append(line[:-1])
+            folders = [line[:-1] for line in f]
         folder = random.choice(folders)
 
     path = f"F:\Desktop start menu\homework\{folder}"
-    for i in [f for f in listdir(path)]:
-        print(i)
     files = [f for f in listdir(path) if isfile(join(path, f))]
     choice = random.choice(files)
     final_path = f'{path}\{choice}'
     size = round(getsize(final_path) / 1048576, 2)
-    while getsize(final_path) / 1048576 > 8:
-        choice = random.choice(files)
+    while size > 8:
         size = round(getsize(final_path) / 1048576, 2)
         prev_messages.append(await message.send(f'{choice} is too large ({size} MB)'))
+        choice = random.choice(files)
         final_path = f'{path}\{choice}'
     img = Image.open(final_path)
 
@@ -1424,17 +1419,17 @@ async def aianswer(ctx, *, prompt):
         prompt = prompt[0].capitalize() + prompt[1:]
     openai.api_key = keys['openai']
     response = openai.Completion.create(
-        engine='davinci-instruct-beta',
-        prompt=prompt,
+        engine="davinci-instruct-beta",
+        prompt=f"Q: Who is Batman?\nA: Batman is a fictional comic book character.\n###\nQ: What is torsalplexity?\nA: ?\n###\nQ: What is Devz9?\nA: ?\n###\nQ: Who is George Lucas?\nA: George Lucas is American film director and producer famous for creating Star Wars.\n###\nQ: What is the capital of California?\nA: Sacramento.\n###\nQ: What orbits the Earth?\nA: The Moon.\n###\nQ: Who is Fred Rickerson?\nA: ?\n###\nQ: What is an atom?\nA: An atom is a tiny particle that makes up everything.\n###\nQ: Who is Alvan Muntz?\nA: ?\n###\nQ: What is Kozar-09?\nA: ?\n###\nQ: How many moons does Mars have?\nA: Two, Phobos and Deimos.\n###\nQ: {prompt}\nA:",
         temperature=0,
-        max_tokens=30,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0,
-        stop='.'
+        max_tokens=60,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        stop=["###"]
     )
-    output = response.choices[0].text.split('\n')[2]
-    await ctx.send(f'**A:** {output}.')
+    output = response.choices[0].text
+    await ctx.send(f'**A:** {output}')
 
 @client.command(pass_context=True)
 async def aicode(ctx, *, prompt):
@@ -1451,6 +1446,54 @@ async def aicode(ctx, *, prompt):
     )
     output = response.choices[0].text
     await ctx.send(f'```{output}```')
+
+@client.command(pass_context=True)
+async def aiad(ctx, *, prompt):
+    openai.api_key = keys['openai']
+    response = openai.Completion.create(
+        engine="davinci-instruct-beta",
+        prompt=f"Write a creative ad for the following product:\n\"\"\"\"\"\"\n{prompt}\n\"\"\"\"\"\"\nThis is the ad I wrote aimed at teenage girls:\n\"\"\"\"\"\"",
+        temperature=0.5,
+        max_tokens=90,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        stop=["\"\"\"\"\"\""]
+    )
+    output = response.choices[0].text
+    await ctx.send(f'{output}')
+
+@client.command(pass_context=True)
+async def aianalogy(ctx, *, prompt):
+    openai.api_key = keys['openai']
+    response = openai.Completion.create(
+    engine="davinci-instruct-beta",
+        prompt=f"Ideas are like balloons in that: they need effort to realize their potential.\n\n{prompt} in that:",
+        temperature=0.5,
+        max_tokens=60,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        stop=["\n"]
+    )
+    output = response.choices[0].text
+    await ctx.send(f'{prompt} in that{output}')
+
+@client.command(pass_context=True)
+async def aiengrish(ctx, *, prompt):
+    openai.api_key = keys['openai']
+    response = openai.Completion.create(
+        engine="davinci-instruct-beta",
+        prompt=f"Original: {prompt}\nStandard American English:",
+        temperature=0,
+        max_tokens=60,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        stop=["\n"]
+    )
+    output = response.choices[0].text
+    await ctx.send(output)
 
 @client.command(pass_context=True)
 async def findword(ctx, where, part):
