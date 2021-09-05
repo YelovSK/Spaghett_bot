@@ -1375,6 +1375,20 @@ async def evaluate(ctx, *, code):
     except:
         await ctx.send("Invalid code")
 
+async def ai(engine, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop=None):
+    openai.api_key = keys['openai']
+    response = openai.Completion.create(
+        engine=engine,
+        prompt=prompt,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        top_p=top_p,
+        frequency_penalty=0.0,
+        presence_penalty=presence_penalty,
+        stop=stop
+    )
+    return response.choices[0].text
+
 @client.command(pass_context=True)
 async def aigenerate(ctx, *, prompt):
     def splitLong(text):
@@ -1386,18 +1400,12 @@ async def aigenerate(ctx, *, prompt):
             mssgs.append(text)
         return mssgs
 
-    openai.api_key = keys['openai']
     await ctx.send("brb, generating...")
-    response = openai.Completion.create(
-        engine='davinci',
-        prompt=prompt,
-        temperature=0.4,
-        max_tokens=500,
-        top_p=1,
-        frequency_penalty=0.5,
-        presence_penalty=0
-    )
-    output = f'{prompt}{response.choices[0].text}'
+    output = await ai(
+        "davinci",
+        prompt,
+        0.4, 500, 1, 0.5, 0)
+    output = prompt + output
     new_output = ''
     for line in output.split('\n'):
         if line.strip() == '':
@@ -1406,7 +1414,6 @@ async def aigenerate(ctx, *, prompt):
         else:
             new_output += line
     output = new_output
-    # output = os.linesep.join([s for s in output.splitlines() if s]) # removes empty lines
     if len(output) > 2000:
         for msg in splitLong(output):
             await ctx.send(msg)
@@ -1417,82 +1424,42 @@ async def aigenerate(ctx, *, prompt):
 async def aianswer(ctx, *, prompt):
     if not prompt[0].isupper():
         prompt = prompt[0].capitalize() + prompt[1:]
-    openai.api_key = keys['openai']
-    response = openai.Completion.create(
-        engine="davinci-instruct-beta",
-        prompt=f"Q: Who is Batman?\nA: Batman is a fictional comic book character.\n###\nQ: What is torsalplexity?\nA: ?\n###\nQ: What is Devz9?\nA: ?\n###\nQ: Who is George Lucas?\nA: George Lucas is American film director and producer famous for creating Star Wars.\n###\nQ: What is the capital of California?\nA: Sacramento.\n###\nQ: What orbits the Earth?\nA: The Moon.\n###\nQ: Who is Fred Rickerson?\nA: ?\n###\nQ: What is an atom?\nA: An atom is a tiny particle that makes up everything.\n###\nQ: Who is Alvan Muntz?\nA: ?\n###\nQ: What is Kozar-09?\nA: ?\n###\nQ: How many moons does Mars have?\nA: Two, Phobos and Deimos.\n###\nQ: {prompt}\nA:",
-        temperature=0,
-        max_tokens=60,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-        stop=["###"]
-    )
-    output = response.choices[0].text
+    output = await ai(
+        "davinci-instruct-beta",
+        f"Q: Who is Batman?\nA: Batman is a fictional comic book character.\n###\nQ: What is torsalplexity?\nA: ?\n###\nQ: What is Devz9?\nA: ?\n###\nQ: Who is George Lucas?\nA: George Lucas is American film director and producer famous for creating Star Wars.\n###\nQ: What is the capital of California?\nA: Sacramento.\n###\nQ: What orbits the Earth?\nA: The Moon.\n###\nQ: Who is Fred Rickerson?\nA: ?\n###\nQ: What is an atom?\nA: An atom is a tiny particle that makes up everything.\n###\nQ: Who is Alvan Muntz?\nA: ?\n###\nQ: What is Kozar-09?\nA: ?\n###\nQ: How many moons does Mars have?\nA: Two, Phobos and Deimos.\n###\nQ: {prompt}\nA:",
+        0.0, 60, 1, 0, 0, "###")
     await ctx.send(f'**A:** {output}')
 
 @client.command(pass_context=True)
-async def aicode(ctx, *, prompt):
-    openai.api_key = keys['openai']
-    response = openai.Completion.create(
-        engine='davinci-instruct-beta',
-        prompt=prompt,
-        temperature=0.75,
-        max_tokens=75,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0,
-        stop='.'
-    )
-    output = response.choices[0].text
-    await ctx.send(f'```{output}```')
-
-@client.command(pass_context=True)
 async def aiad(ctx, *, prompt):
-    openai.api_key = keys['openai']
-    response = openai.Completion.create(
-        engine="davinci-instruct-beta",
-        prompt=f"Write a creative ad for the following product:\n\"\"\"\"\"\"\n{prompt}\n\"\"\"\"\"\"\nThis is the ad I wrote aimed at teenage girls:\n\"\"\"\"\"\"",
-        temperature=0.5,
-        max_tokens=90,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-        stop=["\"\"\"\"\"\""]
-    )
-    output = response.choices[0].text
+    output = await ai(
+        "davinci-instruct-beta",
+        f"Write a creative ad for the following product:\n\"\"\"\"\"\"\n{prompt}\n\"\"\"\"\"\"\nThis is the ad I wrote aimed at teenage girls:\n\"\"\"\"\"\"",
+        0.5, 90, 1, 0, 0, "\"\"\"\"\"\"")
     await ctx.send(f'{output}')
 
 @client.command(pass_context=True)
 async def aianalogy(ctx, *, prompt):
-    openai.api_key = keys['openai']
-    response = openai.Completion.create(
-    engine="davinci-instruct-beta",
-        prompt=f"Ideas are like balloons in that: they need effort to realize their potential.\n\n{prompt} in that:",
-        temperature=0.5,
-        max_tokens=60,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-        stop=["\n"]
-    )
-    output = response.choices[0].text
+    output = await ai(
+        "davinci-instruct-beta",
+        f"Ideas are like balloons in that: they need effort to realize their potential.\n\n{prompt} in that:",
+        0.5, 60, 1.0, 0.0, 0.0, "\n")
     await ctx.send(f'{prompt} in that{output}')
 
 @client.command(pass_context=True)
 async def aiengrish(ctx, *, prompt):
-    openai.api_key = keys['openai']
-    response = openai.Completion.create(
-        engine="davinci-instruct-beta",
-        prompt=f"Original: {prompt}\nStandard American English:",
-        temperature=0,
-        max_tokens=60,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-        stop=["\n"]
-    )
-    output = response.choices[0].text
+    output = await ai(
+        "davinci-instruct-beta",
+        f"Original: {prompt}\nStandard American English:",
+        0, 60, 1.0, 0.0, 0.0, "\n")
+    await ctx.send(output)
+
+@client.command(pass_context=True)
+async def aicode(ctx, *, prompt):
+    output = await ai(
+        "davinci-codex",
+        prompt,
+        0, 64, 1.0, 0.0, 0.0, "#")
     await ctx.send(output)
 
 @client.command(pass_context=True)
