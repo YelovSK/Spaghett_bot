@@ -587,7 +587,7 @@ async def showcolour(ctx, *, name):
 
 @slash.slash(description='<video_name> / lists videos when no argument')
 async def video(ctx, *, video=''):
-    path = 'D:\Desktop/Spaghett Bot/send/videos'
+    path = 'D:\Desktop/Spaghett_bot/send/videos'
     videos = [f for f in listdir(path) if isfile(join(path, f)) and (f[-4:] == '.mp4')]
 
     if not video:
@@ -641,7 +641,7 @@ async def aeoo(ctx):
 
 @slash.slash(description='random meme')
 async def meme(ctx): 
-    path = f"D:\Desktop\Spaghett Bot\memes"
+    path = f"D:\Desktop\Spaghett_bot\memes"
     files = [f for f in listdir(path) if isfile(join(path, f))]
     choice = random.choice(files)
     img = Image.open(f'{path}\{choice}')
@@ -784,8 +784,8 @@ async def journal(message, word='', additional=None):
 
         def __init__(self):
             self.time = time.time()
-            self.base = "D:\\Desktop\\Spaghett Bot\\Journal format"
-            self.path = "D:\\Desktop\\Spaghett Bot\\Journal format\\Diarium"
+            self.base = "D:\\Desktop\\Spaghett_bot\\Journal format"
+            self.path = "D:\\Desktop\\Spaghett_bot\\Journal format\\Diarium"
             self.files = [f for f in listdir(self.path)]
             self.count_all = 0
             with open(self.base+'\\files.txt') as f:
