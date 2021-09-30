@@ -975,23 +975,6 @@ async def no(message):
         await message.send(out)
         time.sleep(4)
 
-@slash.slash(description="Continues text with GPT2 AI generation")
-async def gpt2(message, input=""):
-    if (input != ""):
-        await message.send("generating...")
-    else:
-        await message.send("no input")
-        return
-
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-    model = GPT2LMHeadModel.from_pretrained('gpt2')
-
-    inputs = tokenizer.encode(input, return_tensors='pt')
-    outputs = model.generate(inputs, max_length=len(input.split())+30, do_sample=True)
-    text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    
-    await message.send(input + text)
-
 @slash.slash(description="Latency")
 async def ping(message):
     await message.send(f'Pong! {round(client.latency,2)}s')
