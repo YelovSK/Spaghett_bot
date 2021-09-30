@@ -32,7 +32,7 @@ async def fap(ctx):
 
 @help.command()
 async def kawaii(ctx):
-    em = discord.Embed(title = "kawaii", description = "Like fap, less lewd.", color=ctx.author.color)
+    em = discord.Embed(title = "kawaii", description = "Like fap but less lewd.", color=ctx.author.color)
     em.add_field(name = "**Syntax**", value = "kawaii [cum] [image]", inline=False)
     await ctx.send(embed = em)
 
