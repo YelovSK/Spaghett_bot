@@ -1506,9 +1506,8 @@ async def showfunction(ctx, function):
                     out += line
     if out == "```Python\n":
         await ctx.send("Function not found")
+    elif len(out) > 2000:
+        for msg in splitLong(out):
+            prev_messages.append(await ctx.send(msg))
     else:
-        if len(out) > 2000:
-            for msg in splitLong(out):
-                prev_messages.append(await ctx.send(msg))
-        else:
-            prev_messages.append(await ctx.send(out))
+        prev_messages.append(await ctx.send(out))
