@@ -1048,7 +1048,7 @@ async def play(message, *, url):
                 song_queue.pop(0)
                 link, title = download(artist + " " + title)
             elif url[:31] == 'https://open.spotify.com/track/':
-                spotify_credentials = SpotifyClientCredentials(client_id='bf8f3c6a05c249fcadb039311742fd07', client_secret='e16b16e950974ddd9175976b16be3671')
+                spotify_credentials = SpotifyClientCredentials(client_id=keys["spotify-id"], client_secret=keys["spotify-secret"])
                 sp = spotipy.Spotify(auth_manager=spotify_credentials)
                 song = sp.track(url)
                 artist = song['artists'][0]['name']
