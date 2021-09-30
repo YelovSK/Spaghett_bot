@@ -193,9 +193,9 @@ async def image(ctx, img_name='', *, text=''):
         fontsize = int((basewidth+200)/((chars/2)+3))
         w, h = draw.textsize(message, font=font)
         draw.text(((img.width-w)/2, img.height-(fontsize/1.2)-30), message, font=font, fill='white')
-        img.save('send/meme.png')
+        img.save(base_folder_folders+'/send/meme.png')
 
-        file = discord.File("send/meme.png", filename="send/meme.png")
+        file = discord.File(base_folder_folders+"/send/meme.png", filename=base_folder_folders+"/send/meme.png")
         await ctx.send(file=file)
 
 @slash.slash(description='random fap image, can be sent with <folder_name>')
@@ -217,7 +217,7 @@ async def fap(message, *, folder=''):
         final_path = f'{path}\{choice}'
     img = Image.open(final_path)
 
-    save = 'send/homework.png'
+    save = base_folder_folders+'/send/homework.png'
 
     img.save(save)
     file = discord.File(save, filename=save)
@@ -252,9 +252,9 @@ async def kawaii(message, do='', image=None):
     if do == 'cum':
         channel = client.get_channel(680494725165219958)
 
-    path = "send/kawaii"
+    path = base_folder_folders+"/send/kawaii"
     if do and do != 'cum':
-        file = discord.File(f'send/kawaii/{do}', filename=f'send/kawaii/{do}')
+        file = discord.File(f'{base_folder_folders}/send/kawaii/{do}', filename=f'{base_folder_folders}/send/kawaii/{do}')
         prev_messages.append(await channel.send(file=file))
         return
 
@@ -277,7 +277,7 @@ async def kawaii(message, do='', image=None):
 
     img = Image.open(f'{path}\{choice}')
 
-    save = 'send/kawaii.png'
+    save = base_folder_folders+'/send/kawaii.png'
 
     img.save(save)
     file = discord.File(save, filename=save)
@@ -530,13 +530,13 @@ async def reddit(message, sub, text=None):
             url = post.url
             ext = url[-4:]
             if ext in (".jpg", ".png"):
-                urllib.request.urlretrieve(url, 'send/reddit.png')
+                urllib.request.urlretrieve(url, base_folder_folders+'/send/reddit.png')
                 break
             if post == posts[-1]:
                 await message.send("*Couldn't find an image.*")
                 return
         await message.send(f'****Subreddit****: r/{sub}')
-        await message.channel.send(file = discord.File("send/reddit.png", "send/reddit.png")) 
+        await message.channel.send(file = discord.File(base_folder_folders+"/send/reddit.png", base_folder_folders+"/send/reddit.png")) 
 
 @slash.slash(description='random coomer subreddit')
 async def coomer(message):
@@ -582,8 +582,8 @@ async def showcolour(ctx, *, name):
             if line[line.find(':')+2 : -1] == name:
                 r, g, b = line[:line.find(':')-1].split()
                 img = Image.new('RGB', (400, 400), (int(r), int(g), int(b)))
-                img.save('send/colour.jpg')
-                await ctx.send(file = discord.File('send/colour.jpg', 'send/colour.jpg'))
+                img.save(base_folder_folders+'/send/colour.jpg')
+                await ctx.send(file = discord.File(base_folder_folders+'/send/colour.jpg', base_folder_folders+'/send/colour.jpg'))
                 break
 
 @slash.slash(description='<video_name> / lists videos when no argument')
@@ -628,7 +628,7 @@ async def whOMEGALUL(ctx):
 
 @slash.slash(description='plz audio <filename> (no extension)')
 async def audio(ctx, *filename):
-    await ctx.send(file = discord.File(f'send/{" ".join(filename)}.mp3'))
+    await ctx.send(file = discord.File(f'{base_folder_folders}/send/{" ".join(filename)}.mp3'))
 
 @slash.slash(description="tumblin' down")
 async def deth(ctx):
@@ -637,7 +637,7 @@ async def deth(ctx):
 
 @slash.slash(description='re:zero spook sound')
 async def aeoo(ctx):
-    send = 'send/aeoo.mp3'
+    send = base_folder_folders+'/send/aeoo.mp3'
     await ctx.send(file = discord.File(send, send))
 
 @slash.slash(description='random meme')
@@ -647,7 +647,7 @@ async def meme(ctx):
     choice = random.choice(files)
     img = Image.open(f'{path}\{choice}')
 
-    save = 'send/meme.png'
+    save = base_folder_folders+'/send/meme.png'
 
     img.save(save)
     file = discord.File(save, filename=save)
@@ -982,7 +982,7 @@ async def ping(message):
 
 @slash.slash(description="not kokot")
 async def kokot(ctx):
-    send = 'send/kokot.mp3'
+    send = base_folder_folders+'/send/kokot.mp3'
     await ctx.send(file = discord.File(send, send))
 
 @slash.slash(description="Join the current voice channel")
@@ -1000,7 +1000,7 @@ async def play(message, *, url):
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
-        'outtmpl': 'send/ytdl.mp3',
+        'outtmpl': f'{base_folder_folders}/send/ytdl.mp3',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -1011,7 +1011,7 @@ async def play(message, *, url):
     def parse_search(url, volume=100):
         '''Parses search for YouTube, returns YouTube link'''
         def download(search):
-            customSearch = CustomSearch(search, None, limit = 1)
+            customSearch = VideosSearch(search, limit = 1)
             link = customSearch.result()['result'][0]['link']
             title = customSearch.result()['result'][0]['title']
             return (link, title)
@@ -1056,9 +1056,9 @@ async def play(message, *, url):
                 song_queue.pop(0)
                 link, title = download(artist + " " + title)
             elif url[:31] == 'https://open.spotify.com/track/':
-                auth_manager = SpotifyClientCredentials('bf8f3c6a05c249fcadb039311742fd07', 'e16b16e950974ddd9175976b16be3671')
-                sp = spotipy.Spotify(auth_manager=auth_manager)
-                song = sp.track('https://open.spotify.com/track/6E3TudlZucyt2fxE8Ljgw6?si=6b123dd669914e7f')
+                spotify_credentials = SpotifyClientCredentials(client_id='bf8f3c6a05c249fcadb039311742fd07', client_secret='e16b16e950974ddd9175976b16be3671')
+                sp = spotipy.Spotify(auth_manager=spotify_credentials)
+                song = sp.track(url)
                 artist = song['artists'][0]['name']
                 title = song['name']
                 link, title = download(artist + " " + title)
@@ -1075,9 +1075,9 @@ async def play(message, *, url):
     def play_url(url, voice):
         global current_song
         
-        if os.path.isfile("send/song.mp3"):
+        if os.path.isfile(base_folder_folders+"/send/song.mp3"):
             try:
-                os.remove("send/song.mp3")
+                os.remove(base_folder_folders+"/send/song.mp3")
             except:
                 pass
 
@@ -1086,15 +1086,18 @@ async def play(message, *, url):
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
-        for file in os.listdir("./send"):
+        for file in os.listdir(base_folder_folders+"/./send"):
             if file.startswith('ytdl'):
-                os.rename(f'send/{file}', "send/song.mp3")
-        voice.play(discord.FFmpegPCMAudio("send/song.mp3"), after=lambda e: queue(voice))
+                os.rename(f'{base_folder_folders}/send/{file}', base_folder_folders+"/send/song.mp3")
+        voice.play(discord.FFmpegPCMAudio(base_folder_folders+"/send/song.mp3"), after=lambda e: queue(voice))
         voice.source = discord.PCMVolumeTransformer(voice.source, volume=float(volume)/100)
         return link, title
 
     global song_queue
     voiceChannel = message.author.voice.channel
+    if voiceChannel is None:
+        await message.send("You ain't connected dawg")
+        return
     voice = discord.utils.get(client.voice_clients, guild=message.guild)
     if not voice:
         await voiceChannel.connect()
