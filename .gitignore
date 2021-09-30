@@ -7,12 +7,8 @@ Journal format/
 memes/
 SadBoyz/
 send/
-channel.txt
 font.ttf
-ffmpeg.exe
-colour.jpg
-ClientKey.txt
-send_homework.png
+*.exe
 *.jpg
 *.png
 *.txt
