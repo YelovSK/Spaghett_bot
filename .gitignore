@@ -1,6 +1,7 @@
 # don't
 __pycache__/
 .*/
+.*
 DiscordChatExporter/
 Journal format/
 memes/
@@ -13,6 +14,6 @@ colour.jpg
 ClientKey.txt
 run bot.bat
 send_homework.png
-.jpg
-.png
-.txt
+*.jpg
+*.png
+*.txt
