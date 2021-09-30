@@ -92,23 +92,19 @@ async def remind_stop(ctx):
 
 @slash.slash(description='guess number from 1 to 100')
 async def number(ctx, *, num):
-    good = ['Nice flex faggit',
-            'Lucky fuck',
-            'Boohoo do u want me to suck your dick?',
-            'Grats, ur life is still shit',
-            'That wont make ur parents be proud of you',
-            'That number was so fucking predictable']
-    bad = ['AHahha so bad',
-           'Oh no, cant guess a simple number?',
-           'Wrong choice, like every choice uve made in ur life',
-           'Kid, how to say this. U bad.',
-           'U wouldve gotten ur dick sucked if u got this number. Shame.',
-           'CONGRATS! ur wrong',
-           'R u pretending?',
-           'Imagine choosing that number, yikes',
-           'Ur garbage sperm won a lottery yet u cant guess 1 number out of 100',
-           'Pathetic',
-           '?? you might have a small case of serious brain damage']
+    good = []
+    bad = []
+    with open(base_folder_folders+"/text/number_answers.txt") as f:
+        adding_good = True
+        for line in f:
+            line = line[:-1]
+            if line == "bad":
+                adding_good = False
+            elif line != "good":
+                if adding_good:
+                    good.append(line)
+                else:
+                    bad.append(line)
     try:
         numint = int(num)
         cis = random.randint(1, 100)
@@ -366,11 +362,8 @@ async def insult(message, *, ping):
             break
 
     if ping.lower() == 'spaghett bot':
-        await channel.send(f"""<@{name}> I'm gonna fuck you up. I'm gonna
- hurt you real bad. I'm gonna find you, and it won't be nice for you.
- A few body parts might get accidentally sawed off. You might be awake for
- days in incredible pain. Don't worry, I'll keep you alive. Enjoy your day
- <@{name}> :)""")
+        with open(base_folder_folders+"/text/insult_bot_message.txt") as f:
+            await message.send(f.read().replace("*name*", f"<@{name}>"))
     else:
         for i in 'nouns', 'adjectives', 'actions':
             with open(f'{base_folder_folders}+/text/{i}.txt', 'r') as file:
@@ -406,7 +399,7 @@ async def a(message):
 
     if num == 20:
         curr_user = str(message.author), True
-        additional = (f'\nFull-length A')
+        additional = '\nFull-length A'
 
     elif num == 4:
         additional = (f"\nngl {auth}, that's kinda cringe")
@@ -813,7 +806,7 @@ async def journal(message, word='', additional=None):
         def format(self):
             for j in '2017', '2018', '2019', '2020', '2021':
                 for i in range(1, 13):
-                    Path(f'{j}/{str(i)}').mkdir(parents=True, exist_ok=True)
+                    Path(f'{j}/{i}').mkdir(parents=True, exist_ok=True)
             self.files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
             for file in self.files:
                 with open(f'{self.path}\\{file}', 'r', errors='ignore') as f:
@@ -839,8 +832,7 @@ async def journal(message, word='', additional=None):
                             if word[-1] == ',': word = word[:-1]
                             word = word.lower()
                             self.words[word] = self.words.get(word, 0) + 1
-            freq = sorted(self.words.items(), key=lambda x: x[1], reverse=True)
-            return freq
+            return sorted(self.words.items(), key=lambda x: x[1], reverse=True)
 
         def frequency_table(self, count=20):
             return self.freq_table[:count]
