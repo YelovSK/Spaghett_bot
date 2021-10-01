@@ -778,8 +778,8 @@ async def journal(message, word='', additional=None):
 
         def __init__(self):
             self.time = time.time()
-            self.base = "D:\\Desktop\\Spaghett_bot\\Journal format"
-            self.path = "D:\\Desktop\\Spaghett_bot\\Journal format\\Diarium"
+            self.base = "D:\\Desktop\\Spaghett_bot\\Folders\\Journal format"
+            self.path = "D:\\Desktop\\Spaghett_bot\\Folders\\Journal format\\Diarium"
             self.files = [f for f in listdir(self.path)]
             self.count_all = 0
             with open(self.base+'\\files.txt') as f:
