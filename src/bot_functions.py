@@ -900,8 +900,6 @@ async def journal(message, word='', additional=None):
     else:
         prev_messages.append(await message.send(journal_text))
 
-    # await message.message.delete()
-
 @slash.slash(description='Random message from Discord. Argument specifies the channel, default is "main"')
 async def sadboyz(message, channel='main', user=''):
     with open(f'SadBoyz/{channel}.txt', 'r', errors='ignore') as file:
