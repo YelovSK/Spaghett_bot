@@ -1368,15 +1368,6 @@ async def ai(engine, prompt, temperature, max_tokens, top_p, frequency_penalty, 
 
 @client.command(pass_context=True)
 async def aigenerate(ctx, *, prompt):
-    def splitLong(text):
-        mssgs = []
-        for _ in range((len(text)//2000) + 1):
-            mssgs.append(text[:2000])
-            text = text[2000:]
-        if text:
-            mssgs.append(text)
-        return mssgs
-
     await ctx.send("brb, generating...")
     output = await ai(
         "davinci",
