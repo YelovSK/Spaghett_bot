@@ -104,8 +104,8 @@ async def dict(ctx):
 
 @help.command()
 async def journal(ctx):
-    em = discord.Embed(title = "journal", description = "Private shit, you can't use it anyway", color=ctx.author.color)
-    em.add_field(name = "**Syntax**", value = "journal <find> [count/allinfo]", inline=False)
+    em = discord.Embed(title = "journal", description = "Private shit, you can't use it anyway.", color=ctx.author.color)
+    em.add_field(name = "**Syntax**", value = "journal [word] [count/allinfo/random]", inline=False)
     await ctx.send(embed = em)
 
 @help.command()

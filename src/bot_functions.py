@@ -35,7 +35,7 @@ users_allowed = ("Yelov#5021", "Averso#5633", "jozko#1351", "AltheaZ0rg#8216")
 song_queue = []
 current_song = ''
 keys = {}
-base_folder_folders = "D:\\Desktop\\Spaghett_bot\\folders"
+folders_path = os.path.relpath("folders")
 with open("ClientKey.txt") as f:
     for line in f:
         line = line[:-1]
@@ -43,7 +43,7 @@ with open("ClientKey.txt") as f:
         keys[key] = val
 
 
-def splitLong(text):
+def splitLong(text):    # todo formatting breaks if split at **word
     mssgs = []
     for _ in range((len(text)//2000) + 1):
         mssgs.append(text[:2000])
@@ -113,7 +113,7 @@ async def remind_stop(ctx):
 async def number(ctx, *, num):
     good = []
     bad = []
-    with open(base_folder_folders+"/text/number_answers.txt") as f:
+    with open(folders_path+"/text/number_answers.txt") as f:
         adding_good = True
         for line in f:
             line = line[:-1]
@@ -148,18 +148,18 @@ async def word(ctx, do='', *, word=''):
         await ctx.send('"list" / "define <word>" / "add <word : definition>"')
 
     elif do in 'add':
-        with open(base_folder_folders+'/text/dictionary.txt', 'r') as file:
+        with open(folders_path+'/text/dictionary.txt', 'r') as file:
             for line in file:
                 index = line.find(':')
                 dick[line[:index-1]] = line[index+2:]
 
         if word not in dick.keys():
-            with open(base_folder_folders+'/text/dictionary.txt', 'a') as file:
+            with open(folders_path+'/text/dictionary.txt', 'a') as file:
                 file.write(f'{word}:{definition}\n')
                 print(f'Added {word}')
 
     elif do == 'define':
-        with open(base_folder_folders+'/text/dictionary.txt', 'r') as file:
+        with open(folders_path+'/text/dictionary.txt', 'r') as file:
             for line in file:
                 index = line.find(':')
                 if line[:index-1] == word:
@@ -168,7 +168,7 @@ async def word(ctx, do='', *, word=''):
     elif do == 'list':
         send = ''
 
-        with open(base_folder_folders+'/text/dictionary.txt', 'r') as file:
+        with open(folders_path+'/text/dictionary.txt', 'r') as file:
             for line in file:
                 index = line.find(':')
                 send += f'{line[:index-1]}\n'
@@ -179,7 +179,7 @@ async def word(ctx, do='', *, word=''):
 async def image(ctx, img_name='', *, text=''):
     if not img_name:
         await ctx.send('Send with <image_name> <text>')
-        send, path = "", f"{base_folder_folders}/imgs"
+        send, path = "", f"{folders_path}/imgs"
         files = [f[:-4] for f in listdir(path) if isfile(join(path, f))]
 
         for file in files:
@@ -190,9 +190,9 @@ async def image(ctx, img_name='', *, text=''):
         split = [img_name, text]
         num = split[0]
         try:
-            img = Image.open(f'{base_folder_folders}/imgs/{num}.png')
+            img = Image.open(f'{folders_path}/imgs/{num}.png')
         except:
-            img = Image.open(f'{base_folder_folders}/imgs/{num}.jpg')
+            img = Image.open(f'{folders_path}/imgs/{num}.jpg')
 
         wpercent = (basewidth/float(img.size[0]))
         hsize = int((float(img.size[1])*float(wpercent)))
@@ -210,16 +210,16 @@ async def image(ctx, img_name='', *, text=''):
         fontsize = int((basewidth+200)/((chars/2)+3))
         w, h = draw.textsize(message, font=font)
         draw.text(((img.width-w)/2, img.height-(fontsize/1.2)-30), message, font=font, fill='white')
-        img.save(base_folder_folders+'/send/meme.png')
+        img.save(folders_path+'/send/meme.png')
 
-        file = discord.File(base_folder_folders+"/send/meme.png", filename=base_folder_folders+"/send/meme.png")
+        file = discord.File(folders_path+"/send/meme.png", filename=folders_path+"/send/meme.png")
         await ctx.send(file=file)
 
 
 @slash.slash(description='random fap image, can be sent with <folder_name>')
 async def fap(message, *, folder=''):
     if not folder:
-        with open(base_folder_folders+"/text/fap.txt", 'r') as f:
+        with open(folders_path+"/text/fap.txt", 'r') as f:
             folders = [line[:-1] for line in f]
         folder = random.choice(folders)
 
@@ -235,7 +235,7 @@ async def fap(message, *, folder=''):
         final_path = f'{path}\{choice}'
     img = Image.open(final_path)
 
-    save = base_folder_folders+'/send/homework.png'
+    save = folders_path+'/send/homework.png'
 
     img.save(save)
     file = discord.File(save, filename=save)
@@ -272,14 +272,14 @@ async def kawaii(message, do='', image=None):
     if do == 'cum':
         channel = client.get_channel(680494725165219958)
 
-    path = base_folder_folders+"/send/kawaii"
+    path = folders_path+"/send/kawaii"
     if do and do != 'cum':
-        file = discord.File(f'{base_folder_folders}/send/kawaii/{do}',
-                            filename=f'{base_folder_folders}/send/kawaii/{do}')
+        file = discord.File(f'{folders_path}/send/kawaii/{do}',
+                            filename=f'{folders_path}/send/kawaii/{do}')
         prev_messages.append(await channel.send(file=file))
         return
 
-    with open(base_folder_folders+'/text/pseudorandom_kawaii.txt', 'r') as f:
+    with open(folders_path+'/text/pseudorandom_kawaii.txt', 'r') as f:
         order = []
         for line in f:
             if line.find('\n') == -1:
@@ -290,7 +290,7 @@ async def kawaii(message, do='', image=None):
     files = [f for f in listdir(path) if isfile(join(path, f))]
     choice = random.choice(files[5:])
 
-    with open(base_folder_folders+'/text/pseudorandom_kawaii.txt', 'w') as f:
+    with open(folders_path+'/text/pseudorandom_kawaii.txt', 'w') as f:
         o = order[1:] if len(order) == len(files) else order
         for img in o:
             f.write(f'{img}\n')
@@ -298,7 +298,7 @@ async def kawaii(message, do='', image=None):
 
     img = Image.open(f'{path}\{choice}')
 
-    save = base_folder_folders+'/send/kawaii.png'
+    save = folders_path+'/send/kawaii.png'
 
     img.save(save)
     file = discord.File(save, filename=save)
@@ -319,7 +319,7 @@ async def guess(message, *, num):
     current, guesses = None, None
     users = {}
 
-    with open(base_folder_folders+'/text/guess_stats.txt') as f:
+    with open(folders_path+'/text/guess_stats.txt') as f:
         for line in f:
             split = line.split()
             if len(split) <= 2:
@@ -327,7 +327,7 @@ async def guess(message, *, num):
 
     curr_user = str(message.author)
 
-    with open(base_folder_folders+'/text/guess.txt') as file:
+    with open(folders_path+'/text/guess.txt') as file:
         for i, line in enumerate(file):
             if i == 0:
                 current = line[:-1]
@@ -342,9 +342,9 @@ tries\n{curr_user[:curr_user.find("#")]} guessed correctly
 
     if change:
         cis = random.randrange(10000)
-        with open(base_folder_folders+'/text/guess.txt', 'w') as file:
+        with open(folders_path+'/text/guess.txt', 'w') as file:
             file.write(f'{cis}\n0\n')
-        with open(base_folder_folders+'/text/guess_stats.txt', 'w') as file:
+        with open(folders_path+'/text/guess_stats.txt', 'w') as file:
             for name, points in users.items():
                 if name == curr_user:
                     file.write(f'{name} {points+1}\n')
@@ -355,7 +355,7 @@ tries\n{curr_user[:curr_user.find("#")]} guessed correctly
             await channel.send('Higher')
         else:
             await channel.send('Lower')
-        with open(base_folder_folders+'/text/guess.txt', 'w') as file:
+        with open(folders_path+'/text/guess.txt', 'w') as file:
             file.write(f'{current}\n{int(guesses)+1}\n')
 
 
@@ -367,7 +367,7 @@ async def me(message):
 
 @slash.slash(description='random swear word')
 async def fuck(message):
-    with open(base_folder_folders+'/text/swear.txt', 'r') as file:
+    with open(folders_path+'/text/swear.txt', 'r') as file:
         words = [line for line in file]
 
     await message.send(random.choice(words))
@@ -391,11 +391,11 @@ async def insult(message, *, ping):
             break
 
     if ping.lower() == 'spaghett bot':
-        with open(base_folder_folders+"/text/insult_bot_message.txt") as f:
+        with open(folders_path+"/text/insult_bot_message.txt") as f:
             await message.send(f.read().replace("*name*", f"<@{name}>"))
     else:
         for i in 'nouns', 'adjectives', 'actions':
-            with open(f'{base_folder_folders}+/text/{i}.txt', 'r') as file:
+            with open(f'{folders_path}+/text/{i}.txt', 'r') as file:
                 if i == 'nouns':
                     nouns = [line[:-1] for line in file]
                 elif i == 'adjectives':
@@ -439,12 +439,12 @@ async def a(message):
 
     await message.send(send)
 
-    with open(base_folder_folders+'/text/a_stats.txt', 'r') as f:
+    with open(folders_path+'/text/a_stats.txt', 'r') as f:
         for line in f:
             spl = line.split()
             stats[spl[0]] = [spl[1], spl[2], spl[3]]
     rnd = ('write random u fkin cat', 'something something random', 'go do rng', 'go post fucky wucky in rand..ucky')
-    with open(base_folder_folders+'/text/a_stats.txt', 'w') as f:
+    with open(folders_path+'/text/a_stats.txt', 'w') as f:
         for name, stat in stats.items():
             if name == curr_user[0]:
                 if name == "Averso#5633" and not int(stat[0]) % 10:
@@ -468,7 +468,7 @@ async def staats(message, everyone=''):
         evr = True
     curr_user = str(message.author)
 
-    with open(base_folder_folders+'/text/a_stats.txt', 'r') as f:
+    with open(folders_path+'/text/a_stats.txt', 'r') as f:
         for line in f:
             spl = line.split()
             stats[spl[0]] = [spl[1], spl[2], spl[3]]
@@ -504,7 +504,7 @@ async def goodbot(ctx):
 
 @slash.slash(description='when u feel bad')
 async def f(ctx):
-    with open(base_folder_folders+'/text/f.txt', 'r') as f:
+    with open(folders_path+'/text/f.txt', 'r') as f:
         order = []
         for line in f:
             if line.find('\n') == -1:
@@ -514,7 +514,7 @@ async def f(ctx):
 
     choice = random.choice(order[:10])
 
-    with open(base_folder_folders+'/text/f.txt', 'w') as f:
+    with open(folders_path+'/text/f.txt', 'w') as f:
         for line in order:
             if line != choice:
                 f.write(f'{line}\n')
@@ -525,13 +525,13 @@ async def f(ctx):
 
 @slash.slash(description='add something bad / sad / angry / depressing')
 async def addf(ctx, *, string):
-    with open(base_folder_folders+'/text/f.txt', 'a') as file:
+    with open(folders_path+'/text/f.txt', 'a') as file:
         file.write(f'{string}\n')
 
 
 @slash.slash(description='image from <subreddit>, add "text" at the end for text posts')
 async def reddit(message, sub, text=None):
-    with open(base_folder_folders+'/text/reddit.txt', 'r') as f:
+    with open(folders_path+'/text/reddit.txt', 'r') as f:
         data = [line[:-1] for line in f]
 
     reddit = praw.Reddit(client_id=data.pop(),
@@ -559,13 +559,13 @@ async def reddit(message, sub, text=None):
             url = post.url
             ext = url[-4:]
             if ext in (".jpg", ".png"):
-                urllib.request.urlretrieve(url, base_folder_folders+'/send/reddit.png')
+                urllib.request.urlretrieve(url, folders_path+'/send/reddit.png')
                 break
             if post == posts[-1]:
                 await message.send("*Couldn't find an image.*")
                 return
         await message.send(f'****Subreddit****: r/{sub}')
-        await message.channel.send(file=discord.File(base_folder_folders+"/send/reddit.png", base_folder_folders+"/send/reddit.png"))
+        await message.channel.send(file=discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
 
 
 @slash.slash(description='random coomer subreddit')
@@ -590,20 +590,20 @@ async def colour(ctx):
     r, g, b = random.randrange(256), random.randrange(256), random.randrange(256)
     img = Image.new('RGB', (400, 400), (r, g, b))
     img.save('colour.jpg')
-    with open(base_folder_folders+'/text/colours.txt', 'a') as f:
+    with open(folders_path+'/text/colours.txt', 'a') as f:
         f.write(f'{r} {g} {b} : ')
     await ctx.send(file=discord.File("colour.jpg", "colour.jpg"))
 
 
 @slash.slash(description='names the last generated colour')
 async def namecolour(ctx, *, name):
-    with open(base_folder_folders+'/text/colours.txt', 'a') as f:
+    with open(folders_path+'/text/colours.txt', 'a') as f:
         f.write(f'{name}\n')
 
 
 @slash.slash(description='lists named colours')
 async def colourlist(ctx):
-    with open(base_folder_folders+'/text/colours.txt', 'r') as f:
+    with open(folders_path+'/text/colours.txt', 'r') as f:
         arr = [line[line.find(':')+2: -1] for line in f]
     send = ''.join(f'{prvok}\n' for prvok in arr)
     await ctx.send(send)
@@ -611,19 +611,19 @@ async def colourlist(ctx):
 
 @slash.slash(description='shows <name> colour')
 async def showcolour(ctx, *, name):
-    with open(base_folder_folders+'/text/colours.txt', 'r') as f:
+    with open(folders_path+'/text/colours.txt', 'r') as f:
         for line in f:
             if line[line.find(':')+2: -1] == name:
                 r, g, b = line[:line.find(':')-1].split()
                 img = Image.new('RGB', (400, 400), (int(r), int(g), int(b)))
-                img.save(base_folder_folders+'/send/colour.jpg')
-                await ctx.send(file=discord.File(base_folder_folders+'/send/colour.jpg', base_folder_folders+'/send/colour.jpg'))
+                img.save(folders_path+'/send/colour.jpg')
+                await ctx.send(file=discord.File(folders_path+'/send/colour.jpg', folders_path+'/send/colour.jpg'))
                 break
 
 
 @slash.slash(description='<video_name> / lists videos when no argument')
 async def video(ctx, *, video=''):
-    path = 'D:\Desktop/Spaghett_bot/folders/send/videos'
+    path = folders_path+'/send/videos'
     videos = [f for f in listdir(path) if isfile(join(path, f)) and (f[-4:] == '.mp4')]
 
     if not video:
@@ -634,7 +634,7 @@ async def video(ctx, *, video=''):
         for vid in videos:
             if vid[:vid.find('.')] == video:
                 found = True
-                send = f'{base_folder_folders}/send/videos/{vid}'
+                send = f'{folders_path}/send/videos/{vid}'
         if not found:
             await ctx.send('No such video.')
         else:
@@ -643,54 +643,54 @@ async def video(ctx, *, video=''):
 
 @slash.slash(description='when a is not enough')
 async def AAA(ctx):
-    send = base_folder_folders+'/send/videos/AAA.mp4'
+    send = folders_path+'/send/videos/AAA.mp4'
     await ctx.send(file=discord.File(send, send))
 
 
 @slash.slash(description='could i feel normal for one fucking moment please')
 async def EEE(ctx):
-    send = base_folder_folders+'/send/videos/EEE.mp4'
+    send = folders_path+'/send/videos/EEE.mp4'
     await ctx.send(file=discord.File(send, send))
 
 
 @slash.slash(description='ptsd end of eva warning')
 async def AAAEEE(ctx):
-    send = base_folder_folders+'/send/videos/AAAEEE.mp4'
+    send = folders_path+'/send/videos/AAAEEE.mp4'
     await ctx.send(file=discord.File(send, send))
 
 
 @slash.slash(description='i love emilia')
 async def whOMEGALUL(ctx):
     i = random.randint(1, 4)
-    send = f'{base_folder_folders}/send/videos/who{i}.mp4'
+    send = f'{folders_path}/send/videos/who{i}.mp4'
     await ctx.send(file=discord.File(send, send))
 
 
 @slash.slash(description='plz audio <filename> (no extension)')
 async def audio(ctx, *filename):
-    await ctx.send(file=discord.File(f'{base_folder_folders}/send/{" ".join(filename)}.mp3'))
+    await ctx.send(file=discord.File(f'{folders_path}/send/{" ".join(filename)}.mp3'))
 
 
 @slash.slash(description="tumblin' down")
 async def deth(ctx):
-    send = base_folder_folders+'/send/tod.mp3'
+    send = folders_path+'/send/tod.mp3'
     await ctx.send(file=discord.File(send, send))
 
 
 @slash.slash(description='re:zero spook sound')
 async def aeoo(ctx):
-    send = base_folder_folders+'/send/aeoo.mp3'
+    send = folders_path+'/send/aeoo.mp3'
     await ctx.send(file=discord.File(send, send))
 
 
 @slash.slash(description='random meme')
 async def meme(ctx):
-    path = "D:\Desktop\Spaghett_bot\folders\memes"
+    path = folders_path+"\memes"
     files = [f for f in listdir(path) if isfile(join(path, f))]
     choice = random.choice(files)
     img = Image.open(f'{path}\{choice}')
 
-    save = base_folder_folders+'/send/meme.png'
+    save = folders_path+'/send/meme.png'
 
     img.save(save)
     file = discord.File(save, filename=save)
@@ -715,7 +715,7 @@ async def text(message, filename=''):
         await message.send('specify file name')
     else:
         out = ''
-        with open(f'{base_folder_folders}/text/{filename}.txt', 'r') as f:
+        with open(f'{folders_path}/text/{filename}.txt', 'r') as f:
             for line in f:
                 out += line
         await message.send(out)
@@ -749,7 +749,7 @@ async def weather(ctx, *, specify=''):
     info['humidex'] = weather.humidex
     info['heat_index'] = weather.heat_index
 
-    with open(base_folder_folders+'/text/weather_comment.txt', 'r') as f:
+    with open(folders_path+'/text/weather_comment.txt', 'r') as f:
         comments = {}
         for line in f:
             if line[0] == '/':
@@ -799,7 +799,7 @@ async def sorry(message, name=''):
             await channel.send("""i'm sorry to user who doesn't exist.. 
 or mby it was someone's nickname, but i deleted that cuz of some bug i can't be bothered to fix :)""")
             return
-        with open(base_folder_folders+'/text/sry.txt', 'r') as f:
+        with open(folders_path+'/text/sry.txt', 'r') as f:
             send = f.readline()
         await channel.send(f"<@{name_d}> {send}")
 
@@ -828,15 +828,15 @@ async def answer(message, *, question):
 # @client.command(pass_context=True)
 
 
-@slash.slash(description='Random entry if no argument. <word> - word to find, <additional> - "count" / "allinfo"')
-async def journal(message, word='', additional=None):  # sourcery no-metrics
+@slash.slash(description='Random entry if no argument. [word] - word to find, [additional] - "count" / "allinfo" / "random"')
+async def journal(message, word='', additional=""):
 
     class Journal:
 
         def __init__(self):
             self.time = time.time()
-            self.base = "D:\\Desktop\\Spaghett_bot\\Folders\\Journal format"
-            self.path = "D:\\Desktop\\Spaghett_bot\\Folders\\Journal format\\Diarium"
+            self.base = folders_path+"\\Journal format"
+            self.path = folders_path+"\\Journal format\\Diarium"
             self.files = [f for f in listdir(self.path)]
             self.count_all = 0
             with open(self.base+'\\files.txt') as f:
@@ -914,8 +914,13 @@ async def journal(message, word='', additional=None):  # sourcery no-metrics
                                 y, d, m = file[8:-4].split('-')
                                 out += f'**Date: {d}.{m}.{y}**\n'
                             putDate, foundWord = True, True
-                            self.count += len(re.findall(word, sentence, re.IGNORECASE))
-                            out += sentence + '.\n'
+                            for w in sentence.split():
+                                if word.lower() in w.lower():
+                                    self.count += 1
+                                    out += f'**{w}** '
+                                else:
+                                    out += f'{w} '
+                            out = out[:-1]+".\n"
                 if foundWord:
                     out += '\n'
             find_time = time.time() - start
@@ -936,21 +941,29 @@ async def journal(message, word='', additional=None):  # sourcery no-metrics
     global prev_messages
 
     journal_text = ""
-
     jour = Journal()
-    if additional == "count":
-        jour.find_word(word)
-        prev_messages.append(await message.send(f'{word} found {jour.count} times'))
-        return
+
     if word:
-        print("trying to find", word)
-        journal_text += f'{jour.find_word(word)}'
+        if additional == "count":
+            jour.find_word(word)
+            journal_text += f'The word **{word}** was found {jour.count} times'
+        elif additional == "":
+            journal_text += f'{jour.find_word(word)}'
+        elif additional in ["random", "allinfo"]:
+            journal_text += "Leave the [word] argument empty if you want a random entry or all info"
+        else:
+            journal_text += "You inputted a [word] to search for, set [additional] to 'count' or leave it empty"
     else:
-        journal_text += jour.random_entry()
-    if additional == "allinfo":
-        journal_text += f'\nAll words count: {jour.total_word_count(False)}\n'
-        journal_text += f'Unique words count: {jour.total_word_count(True)}\n'
-        journal_text += f'{jour.frequency_table()}\n'
+        if additional == "random":
+            journal_text += "**RANDOM ENTRY:**\n\n" + jour.random_entry()
+        elif additional == "allinfo":
+            journal_text += f'\n**All words count:** {jour.total_word_count(False)}\n'
+            journal_text += f'**Unique words count:** {jour.total_word_count(True)}\n'
+            journal_text += f'**The most common words:** {jour.frequency_table()}\n'
+        elif additional == "count":
+            journal_text += "Input a [word] to count the occurences of"
+        else:
+            journal_text += "Either input a word or set [additional] to 'random'/'allinfo'"
 
     if len(journal_text) > 2000:
         for msg in splitLong(journal_text):
@@ -1015,7 +1028,7 @@ async def dict(message, *, word_do=''):
 
 @slash.slash(description="Random word from a dictionary")
 async def randomword(message):
-    with open(base_folder_folders+'/text/words_alpha.txt', 'r') as f:
+    with open(folders_path+'/text/words_alpha.txt', 'r') as f:
         words = [line[:-1] for line in f]
     await message.send(random.choice(words))
 
@@ -1036,7 +1049,7 @@ async def ping(message):
 
 @slash.slash(description="not kokot")
 async def kokot(ctx):
-    send = base_folder_folders+'/send/kokot.mp3'
+    send = folders_path+'/send/kokot.mp3'
     await ctx.send(file=discord.File(send, send))
 
 
@@ -1053,11 +1066,11 @@ async def joinvc(message):
 
 
 @client.command(pass_context=True)
-async def play(message, *, url):  # sourcery no-metrics
+async def play(message, *, url):
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
-        'outtmpl': f'{base_folder_folders}/send/ytdl.mp3',
+        'outtmpl': f'{folders_path}/send/ytdl.mp3',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -1134,9 +1147,9 @@ async def play(message, *, url):  # sourcery no-metrics
     def play_url(url, voice):
         global current_song
 
-        if os.path.isfile(base_folder_folders+"/send/song.mp3"):
+        if os.path.isfile(folders_path+"/send/song.mp3"):
             try:
-                os.remove(base_folder_folders+"/send/song.mp3")
+                os.remove(folders_path+"/send/song.mp3")
             except:
                 pass
 
@@ -1145,10 +1158,10 @@ async def play(message, *, url):  # sourcery no-metrics
 
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
-        for file in os.listdir(base_folder_folders+"/./send"):
+        for file in os.listdir(folders_path+"/./send"):
             if file.startswith('ytdl'):
-                os.rename(f'{base_folder_folders}/send/{file}', base_folder_folders+"/send/song.mp3")
-        voice.play(discord.FFmpegPCMAudio(base_folder_folders+"/send/song.mp3"), after=lambda e: queue(voice))
+                os.rename(f'{folders_path}/send/{file}', folders_path+"/send/song.mp3")
+        voice.play(discord.FFmpegPCMAudio(folders_path+"/send/song.mp3"), after=lambda e: queue(voice))
         voice.source = discord.PCMVolumeTransformer(voice.source, volume=float(volume)/100)
         return link, title
 
@@ -1319,17 +1332,17 @@ async def maximumpain(ctx):
 
 
 @client.command(pass_context=True)
-async def maths(ctx, *, action):  # sourcery no-metrics
+async def maths(ctx, *, action):
     def change_num(num):
         try:
             num = round(num, 3)
         except:
             num = round(num)
-        with open(base_folder_folders+'/text/number.txt', 'w') as f:
+        with open(folders_path+'/text/number.txt', 'w') as f:
             f.write(str(num))
         return num
 
-    with open(base_folder_folders+'/text/number.txt', 'r') as f:
+    with open(folders_path+'/text/number.txt', 'r') as f:
         num = Decimal(f.read())
         orig = num
 
