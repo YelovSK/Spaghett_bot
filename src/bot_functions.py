@@ -293,7 +293,6 @@ async def kawaii(message, do='', image=None):
 #         return 0
 
     # await message.message.delete()
-    global prev_messages
 
     if do == 'cum':
         channel = client.get_channel(680494725165219958)
@@ -966,8 +965,6 @@ async def journal(message, word='', additional=""):
         await mySend(message, "Ain't your journal bro")
         return
 
-    global prev_messages
-
     journal_text = ""
     jour = Journal()
 
@@ -1586,29 +1583,23 @@ async def findword(ctx, where, part):
 
 @client.command(pass_context=True)
 async def showfunction(ctx, function):
-    global prev_messages
+    if function == "showfunction":
+        await mySend(ctx, """I swear it worked, but then I refactored the code so that it's shorter but now it doesn't work
+but it's worth the 5 lines saved. Actually now that I look at it it's even uglier. Maybe that's why it's
+not working, so that you wouldn't be able to see this ugly ass disgusting spaghett. Or maybe it's the prettiest
+code you've ever seen. Who knows. You'll never know. You'll never see the code of this function. Ever.""")
+        return
     out = "```Python\n"
-    started = False
-    finding = f"async def {function}"
     with open(os.path.relpath("src")+"\\bot_functions.py", "r") as f:
-        for line in f:
-            if not started and line[:len(finding)] == finding:
-                started = True
-                out += line
-            elif started:
-                if line[0] == "@":
-                    out += "\n```"
-                    if len(out) > 2000:
-                        for msg in splitLong(out):
-                            await mySend(ctx, msg)
-                    else:
-                        await mySend(ctx, out)
-                    return
-                else:
-                    out += line
-    if out == "```Python\n":
+        content = f.read()
+    ix = content.find(f"async def {function}")
+    if ix == -1:
         await mySend(ctx, "Function not found")
-    elif len(out) > 2000:
+        return
+    out += content[ix:]
+    ix = min(out.find("@client"), out.find("@slash"))
+    out = out[:ix]+"\n```"
+    if len(out) > 2000:
         for msg in splitLong(out):
             await mySend(ctx, msg)
     else:
@@ -1618,16 +1609,16 @@ async def showfunction(ctx, function):
 async def epicshit(ctx):
     await mySend(ctx, "Is this shit epic? [yes/no]")
     msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
-    if (msg.content == "yes"):
+    if msg.content == "yes":
         await mySend(ctx, "Fuck yea, bitch.\nYou want [kokot] or [pica]?")
         msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
         if msg.content == "kokot":
             file = discord.File(folders_path+"/imgs/kokot.jpg", filename=folders_path+"/imgs/kokot.jpg")
-            await mySend(ctx, file=file)
+            await mySend(ctx, file)
         elif msg.content == "pica":
             file = discord.File(folders_path+"/imgs/pica.jpg", filename=folders_path+"/imgs/pica.jpg")
-            await mySend(ctx, file=file)
-    elif (msg.content == "no"):
+            await mySend(ctx, file)
+    elif msg.content == "no":
         await mySend(ctx, "You want a slap? [yes/yes]")
         msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
         if msg.content == "yes":
