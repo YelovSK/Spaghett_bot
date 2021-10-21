@@ -19,7 +19,6 @@ import discord
 import openai
 import praw
 from PIL import Image, ImageDraw, ImageFont
-from pkg_resources import CHECKOUT_DIST
 from PyDictionary import PyDictionary
 from pyowm.owm import OWM
 from spotipy import Spotify
@@ -51,7 +50,6 @@ def splitLong(text):    # todo formatting breaks if split at **word
     if text:
         mssgs.append(text)
     return mssgs
-
 
 async def mySend(context, mssg):
     if (type(mssg) == discord.File):
@@ -269,14 +267,11 @@ async def delete(message, number=1):
                 orig_mssg = await channel.fetch_message(int(mssg_id))
                 prev_messages.append(orig_mssg)
             except:
-                print(f"Message with ID {line[1]} was prolly already deleted")
-
-    def check(msg):
-        return msg.author == message.author and msg.channel == message.channel
+                print(f"Message with ID {mssg_id} was prolly already deleted")
 
     if (number == "all"):
         await message.send(f"Type 'yes' if you want to delete {len(prev_messages)} messages.")
-        msg = await client.wait_for('message', check=check)
+        msg = await client.wait_for('message', check=lambda m: m.author == message.author)
         if (msg.content != "yes"):
             return
         number = len(prev_messages)
@@ -1191,7 +1186,7 @@ async def play(message, *, url):
 
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
-        for file in os.listdir(folders_path+"/./send"):
+        for file in listdir(folders_path+"/./send"):
             if file.startswith('ytdl'):
                 os.rename(f'{folders_path}/send/{file}', folders_path+"/send/song.mp3")
         voice.play(discord.FFmpegPCMAudio(folders_path+"/send/song.mp3"), after=lambda e: queue(voice))
@@ -1618,3 +1613,26 @@ async def showfunction(ctx, function):
             await mySend(ctx, msg)
     else:
         await mySend(ctx, out)
+
+@client.command(pass_context=True)  # just testing wait_for()
+async def epicshit(ctx):
+    await mySend(ctx, "Is this shit epic? [yes/no]")
+    msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
+    if (msg.content == "yes"):
+        await mySend(ctx, "Fuck yea, bitch.\nYou want [kokot] or [pica]?")
+        msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
+        if msg.content == "kokot":
+            file = discord.File(folders_path+"/imgs/kokot.jpg", filename=folders_path+"/imgs/kokot.jpg")
+            await mySend(ctx, file=file)
+        elif msg.content == "pica":
+            file = discord.File(folders_path+"/imgs/pica.jpg", filename=folders_path+"/imgs/pica.jpg")
+            await mySend(ctx, file=file)
+    elif (msg.content == "no"):
+        await mySend(ctx, "You want a slap? [yes/yes]")
+        msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
+        if msg.content == "yes":
+            await mySend(ctx, "u kinky mofo ;)")
+        else:
+            await mySend(ctx, f"there was no '{msg.content}' option you moron, get slapped *slaps*")
+    else:
+        await mySend(ctx, "you stupid fuck, that's not [yes/no]")
