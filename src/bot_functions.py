@@ -1,18 +1,32 @@
-import discord, time, random, asyncio, praw, urllib.request, time, shelve, os, youtube_dl, spotipy, re, math, openai, sys, contextlib
-from spotipy.oauth2 import SpotifyClientCredentials
-from youtubesearchpython import *
-from decimal import *
-from os import listdir
-from os.path import isfile, join, getsize
-from PIL import Image, ImageFont, ImageDraw
-from pyowm.owm import OWM
+import discord
+import openai
+import praw
+import asyncio
+import contextlib
+import math
+import os
+import random
+import re
+import shelve
+import sys
+import time
+import urllib.request
+
 from datetime import timezone
-from pathlib import Path
-from PyDictionary import PyDictionary
+from decimal import Decimal
 from io import StringIO
+from os import listdir
+from os.path import getsize, isfile, join
+from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
+from PyDictionary import PyDictionary
+from pyowm.owm import OWM
+from spotipy import Spotify
+from spotipy.oauth2 import SpotifyClientCredentials
+from youtube_dl import YoutubeDL
+from youtubesearchpython import Video, VideosSearch
 
 from help import *
-
 
 stop = False
 remindrun = False
@@ -28,6 +42,7 @@ with open("ClientKey.txt") as f:
         key, val = line.split()
         keys[key] = val
 
+
 def splitLong(text):
     mssgs = []
     for _ in range((len(text)//2000) + 1):
@@ -36,6 +51,7 @@ def splitLong(text):
     if text:
         mssgs.append(text)
     return mssgs
+
 
 @slash.slash(description='example: 1 hour 5 minutes <message> /repeat/')
 async def remind(ctx, *, string):
@@ -76,6 +92,7 @@ async def remind(ctx, *, string):
         await ctx.send(send)
         remindrun = False
 
+
 @slash.slash(description='is timer active?')
 async def remind_active(ctx):
     global remindrun
@@ -84,11 +101,13 @@ async def remind_active(ctx):
     else:
         await ctx.send('Nah')
 
+
 @slash.slash(description='stops timer')
 async def remind_stop(ctx):
     global stop
     print('Stopped reminder')
     stop = True
+
 
 @slash.slash(description='guess number from 1 to 100')
 async def number(ctx, *, num):
@@ -116,6 +135,7 @@ async def number(ctx, *, num):
     except:
         await ctx.send(f'Ah yes, {num} - the perfect "number". Moron.')
 
+
 @slash.slash(description='"list" / "add "word" / "define" <word : definition>')
 async def word(ctx, do='', *, word=''):
     dick = {}
@@ -126,7 +146,7 @@ async def word(ctx, do='', *, word=''):
 
     if not do:
         await ctx.send('"list" / "define <word>" / "add <word : definition>"')
-        
+
     elif do in 'add':
         with open(base_folder_folders+'/text/dictionary.txt', 'r') as file:
             for line in file:
@@ -137,7 +157,7 @@ async def word(ctx, do='', *, word=''):
             with open(base_folder_folders+'/text/dictionary.txt', 'a') as file:
                 file.write(f'{word}:{definition}\n')
                 print(f'Added {word}')
-                
+
     elif do == 'define':
         with open(base_folder_folders+'/text/dictionary.txt', 'r') as file:
             for line in file:
@@ -153,6 +173,7 @@ async def word(ctx, do='', *, word=''):
                 index = line.find(':')
                 send += f'{line[:index-1]}\n'
         await ctx.send(send)
+
 
 @slash.slash(description='<image name> <text> / img list when no argument')
 async def image(ctx, img_name='', *, text=''):
@@ -175,7 +196,7 @@ async def image(ctx, img_name='', *, text=''):
 
         wpercent = (basewidth/float(img.size[0]))
         hsize = int((float(img.size[1])*float(wpercent)))
-        img = img.resize((basewidth,hsize), Image.ANTIALIAS)
+        img = img.resize((basewidth, hsize), Image.ANTIALIAS)
         draw = ImageDraw.Draw(img)
 
         message = ''.join(f'{i} ' for i in split[1:])
@@ -193,6 +214,7 @@ async def image(ctx, img_name='', *, text=''):
 
         file = discord.File(base_folder_folders+"/send/meme.png", filename=base_folder_folders+"/send/meme.png")
         await ctx.send(file=file)
+
 
 @slash.slash(description='random fap image, can be sent with <folder_name>')
 async def fap(message, *, folder=''):
@@ -224,6 +246,7 @@ async def fap(message, *, folder=''):
         await message.send('oopsie, failed to upload, error kodiQ: ' + str(error))
         prev_messages.append(await message.send(f'{choice} is (prolly?) too large ({size} MB)'))
 
+
 @slash.slash(description='[plz delete <msg_num>] no argument deletes all messages')
 async def delete(message, number=0):
     global prev_messages
@@ -233,6 +256,7 @@ async def delete(message, number=0):
     for msg in prev_messages[-number:]:
         await msg.delete()
     prev_messages = prev_messages[:-number]
+
 
 @slash.slash(description='(mostly) sfw')
 async def kawaii(message, do='', image=None):
@@ -250,7 +274,8 @@ async def kawaii(message, do='', image=None):
 
     path = base_folder_folders+"/send/kawaii"
     if do and do != 'cum':
-        file = discord.File(f'{base_folder_folders}/send/kawaii/{do}', filename=f'{base_folder_folders}/send/kawaii/{do}')
+        file = discord.File(f'{base_folder_folders}/send/kawaii/{do}',
+                            filename=f'{base_folder_folders}/send/kawaii/{do}')
         prev_messages.append(await channel.send(file=file))
         return
 
@@ -286,19 +311,20 @@ async def kawaii(message, do='', image=None):
         await asyncio.sleep(3600*4)
         await kawaii(message, 'cum')
 
+
 @slash.slash(description='higher-lower game //0 to 10000//')
 async def guess(message, *, num):
     channel = message.channel
     change = False
     current, guesses = None, None
     users = {}
-    
+
     with open(base_folder_folders+'/text/guess_stats.txt') as f:
         for line in f:
             split = line.split()
             if len(split) <= 2:
                 users[line.split()[0]] = int(line.split()[1])
-        
+
     curr_user = str(message.author)
 
     with open(base_folder_folders+'/text/guess.txt') as file:
@@ -332,10 +358,12 @@ tries\n{curr_user[:curr_user.find("#")]} guessed correctly
         with open(base_folder_folders+'/text/guess.txt', 'w') as file:
             file.write(f'{current}\n{int(guesses)+1}\n')
 
+
 @slash.slash(description='you')
 async def me(message):
     channel = message.channel
     await channel.send(message.author)
+
 
 @slash.slash(description='random swear word')
 async def fuck(message):
@@ -343,6 +371,7 @@ async def fuck(message):
         words = [line for line in file]
 
     await message.send(random.choice(words))
+
 
 @slash.slash(description='insults <discord_name>')
 async def insult(message, *, ping):
@@ -355,7 +384,7 @@ async def insult(message, *, ping):
         if ping.lower() == 'spaghett bot':
             if name == curr_user:
                 name = member.id
-                break           
+                break
         elif ping.lower() == name.lower():
             name = member.id
             found = True
@@ -381,6 +410,7 @@ async def insult(message, *, ping):
             noun = random.choice(nouns)
             act = random.choice(actions)
             await channel.send(f"<@{name}> go {act}, you {adj} {noun}.")
+
 
 @slash.slash(description='4-20 A-s')
 async def a(message):
@@ -426,17 +456,18 @@ async def a(message):
             else:
                 f.write(f'{name} {int(stat[0])} {int(stat[1])} {int(stat[2])}\n')
 
+
 @slash.slash(description="{All guesses/full-length}. Argument <all> for everyone's stats.")
-async def staats(message, everyone = ''):
+async def staats(message, everyone=''):
     stats = {}
     channel = message.channel
-    
+
     if everyone in ['me', '']:
         evr = False
     elif everyone == 'all':
         evr = True
     curr_user = str(message.author)
-    
+
     with open(base_folder_folders+'/text/a_stats.txt', 'r') as f:
         for line in f:
             spl = line.split()
@@ -457,6 +488,7 @@ async def staats(message, everyone = ''):
 
         await message.send(out)
 
+
 @slash.slash(description='sad')
 async def badbot(message):
     channel = message.channel
@@ -464,9 +496,11 @@ async def badbot(message):
     string = string[:string.find("#")]
     await channel.send(f'{string} go commit die')
 
+
 @slash.slash(description='owo')
 async def goodbot(ctx):
     await ctx.send('ty')
+
 
 @slash.slash(description='when u feel bad')
 async def f(ctx):
@@ -477,7 +511,7 @@ async def f(ctx):
                 order.append(line)
             else:
                 order.append(line[:line.find('\n')])
-        
+
     choice = random.choice(order[:10])
 
     with open(base_folder_folders+'/text/f.txt', 'w') as f:
@@ -488,24 +522,26 @@ async def f(ctx):
 
     await ctx.send(choice)
 
+
 @slash.slash(description='add something bad / sad / angry / depressing')
 async def addf(ctx, *, string):
     with open(base_folder_folders+'/text/f.txt', 'a') as file:
         file.write(f'{string}\n')
+
 
 @slash.slash(description='image from <subreddit>, add "text" at the end for text posts')
 async def reddit(message, sub, text=None):
     with open(base_folder_folders+'/text/reddit.txt', 'r') as f:
         data = [line[:-1] for line in f]
 
-    reddit = praw.Reddit(client_id = data.pop(),
-                     client_secret = data.pop(),
-                     username = data.pop(),
-                     password = data.pop(),
-                     user_agent = data.pop())
+    reddit = praw.Reddit(client_id=data.pop(),
+                         client_secret=data.pop(),
+                         username=data.pop(),
+                         password=data.pop(),
+                         user_agent=data.pop())
 
     subreddit = reddit.subreddit(sub)
-    
+
     posts = [post for post in subreddit.hot(limit=10) if not post.stickied]
     random.shuffle(posts)
 
@@ -529,7 +565,8 @@ async def reddit(message, sub, text=None):
                 await message.send("*Couldn't find an image.*")
                 return
         await message.send(f'****Subreddit****: r/{sub}')
-        await message.channel.send(file = discord.File(base_folder_folders+"/send/reddit.png", base_folder_folders+"/send/reddit.png")) 
+        await message.channel.send(file=discord.File(base_folder_folders+"/send/reddit.png", base_folder_folders+"/send/reddit.png"))
+
 
 @slash.slash(description='random coomer subreddit')
 async def coomer(message):
@@ -539,13 +576,14 @@ async def coomer(message):
         await message.send("""ye coming right up.... ooh im
 sooorry, seems like your reddit karma is too low""")
         return 0
-    
+
     chose = random.choice(["petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
-            "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
-            "chiisaihentai"])
+                           "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
+                           "chiisaihentai"])
 
     await channel.send(f'r/{chose}')
     await reddit(message, chose)
+
 
 @slash.slash(description='generates a random colour')
 async def colour(ctx):
@@ -554,30 +592,34 @@ async def colour(ctx):
     img.save('colour.jpg')
     with open(base_folder_folders+'/text/colours.txt', 'a') as f:
         f.write(f'{r} {g} {b} : ')
-    await ctx.send(file = discord.File("colour.jpg", "colour.jpg"))
+    await ctx.send(file=discord.File("colour.jpg", "colour.jpg"))
+
 
 @slash.slash(description='names the last generated colour')
 async def namecolour(ctx, *, name):
     with open(base_folder_folders+'/text/colours.txt', 'a') as f:
         f.write(f'{name}\n')
 
+
 @slash.slash(description='lists named colours')
 async def colourlist(ctx):
     with open(base_folder_folders+'/text/colours.txt', 'r') as f:
-        arr = [line[line.find(':')+2 : -1] for line in f]
+        arr = [line[line.find(':')+2: -1] for line in f]
     send = ''.join(f'{prvok}\n' for prvok in arr)
     await ctx.send(send)
+
 
 @slash.slash(description='shows <name> colour')
 async def showcolour(ctx, *, name):
     with open(base_folder_folders+'/text/colours.txt', 'r') as f:
         for line in f:
-            if line[line.find(':')+2 : -1] == name:
+            if line[line.find(':')+2: -1] == name:
                 r, g, b = line[:line.find(':')-1].split()
                 img = Image.new('RGB', (400, 400), (int(r), int(g), int(b)))
                 img.save(base_folder_folders+'/send/colour.jpg')
-                await ctx.send(file = discord.File(base_folder_folders+'/send/colour.jpg', base_folder_folders+'/send/colour.jpg'))
+                await ctx.send(file=discord.File(base_folder_folders+'/send/colour.jpg', base_folder_folders+'/send/colour.jpg'))
                 break
+
 
 @slash.slash(description='<video_name> / lists videos when no argument')
 async def video(ctx, *, video=''):
@@ -596,45 +638,53 @@ async def video(ctx, *, video=''):
         if not found:
             await ctx.send('No such video.')
         else:
-            await ctx.send(file = discord.File(send, send))
+            await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description='when a is not enough')
 async def AAA(ctx):
     send = base_folder_folders+'/send/videos/AAA.mp4'
-    await ctx.send(file = discord.File(send, send))
+    await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description='could i feel normal for one fucking moment please')
 async def EEE(ctx):
     send = base_folder_folders+'/send/videos/EEE.mp4'
-    await ctx.send(file = discord.File(send, send))
+    await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description='ptsd end of eva warning')
 async def AAAEEE(ctx):
     send = base_folder_folders+'/send/videos/AAAEEE.mp4'
-    await ctx.send(file = discord.File(send, send))
+    await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description='i love emilia')
 async def whOMEGALUL(ctx):
     i = random.randint(1, 4)
     send = f'{base_folder_folders}/send/videos/who{i}.mp4'
-    await ctx.send(file = discord.File(send, send))
+    await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description='plz audio <filename> (no extension)')
 async def audio(ctx, *filename):
-    await ctx.send(file = discord.File(f'{base_folder_folders}/send/{" ".join(filename)}.mp3'))
+    await ctx.send(file=discord.File(f'{base_folder_folders}/send/{" ".join(filename)}.mp3'))
+
 
 @slash.slash(description="tumblin' down")
 async def deth(ctx):
     send = base_folder_folders+'/send/tod.mp3'
-    await ctx.send(file = discord.File(send, send))
+    await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description='re:zero spook sound')
 async def aeoo(ctx):
     send = base_folder_folders+'/send/aeoo.mp3'
-    await ctx.send(file = discord.File(send, send))
+    await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description='random meme')
-async def meme(ctx): 
+async def meme(ctx):
     path = "D:\Desktop\Spaghett_bot\folders\memes"
     files = [f for f in listdir(path) if isfile(join(path, f))]
     choice = random.choice(files)
@@ -645,6 +695,7 @@ async def meme(ctx):
     img.save(save)
     file = discord.File(save, filename=save)
     await ctx.send(file=file)
+
 
 @slash.slash(description='Cuts message into multiple lines.')
 async def cut(ctx, *, message):
@@ -657,6 +708,7 @@ async def cut(ctx, *, message):
             send += f'{i}\n'
     await ctx.send(send)
 
+
 @slash.slash(description='Argument is the name of the text file to be sent.')
 async def text(message, filename=''):
     if not filename:
@@ -667,6 +719,7 @@ async def text(message, filename=''):
             for line in f:
                 out += line
         await message.send(out)
+
 
 @slash.slash(description='You can specify with argument, e.g. "temperature", "humidity", ..')
 async def weather(ctx, *, specify=''):
@@ -720,7 +773,8 @@ async def weather(ctx, *, specify=''):
         await ctx.send(out)
     elif specify:
         send = info[specify.lower()]
-        await ctx.send (f'''**{specify.capitalize()}:** {send}''')
+        await ctx.send(f'''**{specify.capitalize()}:** {send}''')
+
 
 @slash.slash(description='When you need a sincere apology. Name of user as an argument.')
 async def sorry(message, name=''):
@@ -733,7 +787,7 @@ async def sorry(message, name=''):
     elif name.lower() == curr_user.lower():
         await channel.send("i'm sorry but the results came in - you're a narcissist")
     else:
-        found = False            
+        found = False
         for member in message.guild.members:
             name_d = str(member)[:str(member).find('#')]
             print(name, name_d)
@@ -748,7 +802,8 @@ or mby it was someone's nickname, but i deleted that cuz of some bug i can't be 
         with open(base_folder_folders+'/text/sry.txt', 'r') as f:
             send = f.readline()
         await channel.send(f"<@{name_d}> {send}")
-    
+
+
 @slash.slash(description='2000 random characters')
 async def asdlkj(message):
     if str(message.author)[:str(message.author).find('#')] != "Yelov":
@@ -757,22 +812,24 @@ async def asdlkj(message):
     send = "".join(chr(random.randint(33, 126)) for _ in range(2000))
     await message.send(send)
 
+
 @slash.slash(description='Magic 8-ball')
 async def answer(message, *, question):
     auth = str(message.author)[:str(message.author).find("#")]
-    yes = ("for sure dawg", "you fucking bet", "you didn't even have to ask", "obviously yes", "yeh i would say so", "sadly yah",
-    "+")
+    yes = ("for sure dawg", "you fucking bet", "you didn't even have to ask",
+           "obviously yes", "yeh i would say so", "sadly yah", "+")
     maybe = ("idk, like 32.2% no", "haha idk lmao", "not 100% sure", "rather yes than no",
-    "why r u asking that", "i think so", "idk and idc", "maybe yes, maybe no, maybe go fuck yourself", "50/50",
-    "49/51")
+             "why r u asking that", "i think so", "idk and idc", "maybe yes, maybe no, maybe go fuck yourself", "50/50", "49/51")
     no = ("wtf, no dude", "hell nawh", "0", "1", "the electricity pole or smth, the - one", "N. O.",
-    "prolly no", "my dog says no", "most probably not if i do say so myself", "anta baka?!?!! zettai chigau!")
+          "prolly no", "my dog says no", "most probably not if i do say so myself", "anta baka?!?!! zettai chigau!")
     answers = (yes, maybe, no)
     await message.send(f"****{auth}:**** {question}\n****Answer:**** {random.choice(random.choice(answers))}")
 
 # @client.command(pass_context=True)
+
+
 @slash.slash(description='Random entry if no argument. <word> - word to find, <additional> - "count" / "allinfo"')
-async def journal(message, word='', additional=None):
+async def journal(message, word='', additional=None):  # sourcery no-metrics
 
     class Journal:
 
@@ -829,7 +886,8 @@ async def journal(message, word='', additional=None):
                     for sentence in re.split('[.\n]+', txt):
                         for word in sentence.split():
                             self.count_all += 1
-                            if word[-1] == ',': word = word[:-1]
+                            if word[-1] == ',':
+                                word = word[:-1]
                             word = word.lower()
                             self.words[word] = self.words.get(word, 0) + 1
             return sorted(self.words.items(), key=lambda x: x[1], reverse=True)
@@ -900,6 +958,7 @@ async def journal(message, word='', additional=None):
     else:
         prev_messages.append(await message.send(journal_text))
 
+
 @slash.slash(description='Random message from Discord. Argument specifies the channel, default is "main"')
 async def sadboyz(message, channel='main', user=''):
     with open(f'SadBoyz/{channel}.txt', 'r', errors='ignore') as file:
@@ -925,12 +984,13 @@ async def sadboyz(message, channel='main', user=''):
                 return
         await message.send(out)
 
+
 @slash.slash(description="plz dict <word> <define/synonyms/antonyms>")
 async def dict(message, *, word_do=''):
     if len(word_do.split()) != 2:
         await message.send('What word am I supposed to find dumbo')
         return
-        
+
     word, do = word_do.split()
     dictionary = PyDictionary()
     output = ''
@@ -952,11 +1012,13 @@ async def dict(message, *, word_do=''):
         output = output[:-2]
     await message.send(output)
 
+
 @slash.slash(description="Random word from a dictionary")
 async def randomword(message):
     with open(base_folder_folders+'/text/words_alpha.txt', 'r') as f:
         words = [line[:-1] for line in f]
     await message.send(random.choice(words))
+
 
 @slash.slash(description="no")
 async def no(message):
@@ -966,14 +1028,17 @@ async def no(message):
         await message.send(out)
         time.sleep(4)
 
+
 @slash.slash(description="Latency")
 async def ping(message):
     await message.send(f'Pong! {round(client.latency,2)}s')
 
+
 @slash.slash(description="not kokot")
 async def kokot(ctx):
     send = base_folder_folders+'/send/kokot.mp3'
-    await ctx.send(file = discord.File(send, send))
+    await ctx.send(file=discord.File(send, send))
+
 
 @slash.slash(description="Join the current voice channel")
 async def joinvc(message):
@@ -985,8 +1050,10 @@ async def joinvc(message):
     await channel.connect()
 
 # @slash.slash(description="Plays a song. Search by YT/Spotify link or name. Optional [vol={XYZ}].")
+
+
 @client.command(pass_context=True)
-async def play(message, *, url):
+async def play(message, *, url):  # sourcery no-metrics
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -1001,7 +1068,7 @@ async def play(message, *, url):
     def parse_search(url, volume=100):
         '''Parses search for YouTube, returns YouTube link'''
         def download(search):
-            customSearch = VideosSearch(search, limit = 1)
+            customSearch = VideosSearch(search, limit=1)
             link = customSearch.result()['result'][0]['link']
             title = customSearch.result()['result'][0]['title']
             return (link, title)
@@ -1017,14 +1084,15 @@ async def play(message, *, url):
                 volume = 100
             url = url[:-1]
 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl: # todo co za playlist a od koho hra
+        with YoutubeDL(ydl_opts) as ydl:  # todo co za playlist a od koho hra
             if url[:24] == 'https://www.youtube.com/':
                 link = url
                 ydl.download([url])
                 title = Video.get(url)['title']
             elif url[:34] == 'https://open.spotify.com/playlist/':
-                auth_manager = SpotifyClientCredentials('bf8f3c6a05c249fcadb039311742fd07', 'e16b16e950974ddd9175976b16be3671')
-                sp = spotipy.Spotify(auth_manager=auth_manager)
+                auth_manager = SpotifyClientCredentials(
+                    'bf8f3c6a05c249fcadb039311742fd07', 'e16b16e950974ddd9175976b16be3671')
+                sp = Spotify(auth_manager=auth_manager)
                 tracks = []
                 result = sp.playlist_items(url, additional_types=['track'])
                 tracks.extend(result['items'])
@@ -1046,8 +1114,9 @@ async def play(message, *, url):
                 song_queue.pop(0)
                 link, title = download(artist + " " + title)
             elif url[:31] == 'https://open.spotify.com/track/':
-                spotify_credentials = SpotifyClientCredentials(client_id=keys["spotify-id"], client_secret=keys["spotify-secret"])
-                sp = spotipy.Spotify(auth_manager=spotify_credentials)
+                spotify_credentials = SpotifyClientCredentials(
+                    client_id=keys["spotify-id"], client_secret=keys["spotify-secret"])
+                sp = Spotify(auth_manager=spotify_credentials)
                 song = sp.track(url)
                 artist = song['artists'][0]['name']
                 title = song['name']
@@ -1064,7 +1133,7 @@ async def play(message, *, url):
 
     def play_url(url, voice):
         global current_song
-        
+
         if os.path.isfile(base_folder_folders+"/send/song.mp3"):
             try:
                 os.remove(base_folder_folders+"/send/song.mp3")
@@ -1074,7 +1143,7 @@ async def play(message, *, url):
         link, title, volume = parse_search(url)
         current_song = title
 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
         for file in os.listdir(base_folder_folders+"/./send"):
             if file.startswith('ytdl'):
@@ -1093,8 +1162,6 @@ async def play(message, *, url):
         await voiceChannel.connect()
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
 
-
-
     if voice.is_playing() or voice.is_paused():
         title = parse_search(url)[1]
         song_queue.append(title)
@@ -1104,6 +1171,7 @@ async def play(message, *, url):
     link, title = play_url(url, voice)
 
     await message.send(f"Playing **{title}**\n{link}\nCommands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave")
+
 
 @slash.slash(description="Plays an audio file in voice chat")
 async def playfile(ctx, *, url):
@@ -1124,6 +1192,8 @@ async def playfile(ctx, *, url):
     await ctx.send(f"Playing {url}")
 
 # @slash.slash(description="Leaves the current voice channel")
+
+
 @client.command(pass_context=True)
 async def leave(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
@@ -1178,6 +1248,8 @@ async def skip(ctx, number=1):
         await ctx.send("The queue is empty")
 
 # @slash.slash(description="Prints song queue")
+
+
 @client.command(pass_context=True)
 async def queue(ctx):
     global song_queue
@@ -1190,6 +1262,8 @@ async def queue(ctx):
     await ctx.send("**Current queue:**\n" + res)
 
 # @slash.slash(description="Clears song queue")
+
+
 @client.command(pass_context=True)
 async def clearqueue(ctx):
     global song_queue
@@ -1197,6 +1271,8 @@ async def clearqueue(ctx):
     await ctx.send("Song queue cleared")
 
 # @slash.slash(description="Stops music")
+
+
 @client.command(pass_context=True)
 async def stop(ctx):
     global song_queue
@@ -1211,6 +1287,8 @@ async def stop(ctx):
         await ctx.send("Music isn't playing")
 
 # @slash.slash(description="Changes volume (broken)")
+
+
 @client.command(pass_context=True)
 async def volume(ctx, *, volume):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
@@ -1220,6 +1298,8 @@ async def volume(ctx, *, volume):
         voice.source.volume = float(volume) / 100
 
 # @slash.slash(description="Prints current volume")
+
+
 @client.command(pass_context=True)
 async def currentvolume(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
@@ -1227,6 +1307,7 @@ async def currentvolume(ctx):
         await ctx.send("Not connected")
     else:
         await ctx.send(f"Current volume: {voice.source.volume*100}%")
+
 
 @client.command(pass_context=True)
 async def maximumpain(ctx):
@@ -1236,8 +1317,9 @@ async def maximumpain(ctx):
     else:
         voice.source.volume = float(1000000) / 100
 
+
 @client.command(pass_context=True)
-async def maths(ctx, *, action):
+async def maths(ctx, *, action):  # sourcery no-metrics
     def change_num(num):
         try:
             num = round(num, 3)
@@ -1250,7 +1332,7 @@ async def maths(ctx, *, action):
     with open(base_folder_folders+'/text/number.txt', 'r') as f:
         num = Decimal(f.read())
         orig = num
-    
+
     if action == '=':
         await ctx.send(f'The number is **{num}**')
         return
@@ -1309,15 +1391,16 @@ async def maths(ctx, *, action):
             if args == 1:
                 num = func(num)
             elif args == 2:
-                num = func(num,b)
+                num = func(num, b)
         except ValueError:
             if args == 1:
                 num = func(int(num))
             elif args == 2:
-                num = func(int(num),b)
+                num = func(int(num), b)
         num = change_num(num)
 
     await ctx.send(f'{orig} → {num}')
+
 
 @client.command(pass_context=True)
 async def execute(ctx, *, code=''):
@@ -1345,12 +1428,14 @@ async def execute(ctx, *, code=''):
         except:
             await ctx.send("Invalid code")
 
+
 @client.command(pass_context=True)
 async def evaluate(ctx, *, code):
     try:
         await ctx.send(eval(code))
     except:
         await ctx.send("Invalid code")
+
 
 async def ai(engine, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop=None):
     openai.api_key = keys['openai']
@@ -1365,6 +1450,7 @@ async def ai(engine, prompt, temperature, max_tokens, top_p, frequency_penalty, 
         stop=stop
     )
     return response.choices[0].text
+
 
 @client.command(pass_context=True)
 async def aigenerate(ctx, *, prompt):
@@ -1388,6 +1474,7 @@ async def aigenerate(ctx, *, prompt):
     else:
         await ctx.send(output)
 
+
 @client.command(pass_context=True)
 async def aianswer(ctx, *, prompt):
     if not prompt[0].isupper():
@@ -1398,6 +1485,7 @@ async def aianswer(ctx, *, prompt):
         0.0, 60, 1, 0, 0, "###")
     await ctx.send(f'**A:** {output}')
 
+
 @client.command(pass_context=True)
 async def aiad(ctx, *, prompt):
     output = await ai(
@@ -1405,6 +1493,7 @@ async def aiad(ctx, *, prompt):
         f"Write a creative ad for the following product:\n\"\"\"\"\"\"\n{prompt}\n\"\"\"\"\"\"\nThis is the ad I wrote aimed at teenage girls:\n\"\"\"\"\"\"",
         0.5, 90, 1, 0, 0, "\"\"\"\"\"\"")
     await ctx.send(f'{output}')
+
 
 @client.command(pass_context=True)
 async def aianalogy(ctx, *, prompt):
@@ -1414,6 +1503,7 @@ async def aianalogy(ctx, *, prompt):
         0.5, 60, 1.0, 0.0, 0.0, "\n")
     await ctx.send(f'{prompt} in that{output}')
 
+
 @client.command(pass_context=True)
 async def aiengrish(ctx, *, prompt):
     output = await ai(
@@ -1422,6 +1512,7 @@ async def aiengrish(ctx, *, prompt):
         0, 60, 1.0, 0.0, 0.0, "\n")
     await ctx.send(output)
 
+
 @client.command(pass_context=True)
 async def aicode(ctx, *, prompt):
     output = await ai(
@@ -1429,6 +1520,7 @@ async def aicode(ctx, *, prompt):
         prompt,
         0, 64, 1.0, 0.0, 0.0, "#")
     await ctx.send(output)
+
 
 @client.command(pass_context=True)
 async def findword(ctx, where, part):
@@ -1450,6 +1542,7 @@ async def findword(ctx, where, part):
     else:
         await ctx.send(random.choice(output))
 
+
 @client.command(pass_context=True)
 async def showfunction(ctx, function):
     global prev_messages
@@ -1462,7 +1555,7 @@ async def showfunction(ctx, function):
                 started = True
                 out += line
             elif started:
-                if line[0] ==  "@":
+                if line[0] == "@":
                     out += "\n```"
                     if len(out) > 2000:
                         for msg in splitLong(out):
