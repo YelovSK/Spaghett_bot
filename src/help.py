@@ -21,7 +21,7 @@ async def help(ctx):
     em.add_field(name = "GPT3 AI", value = "aigenerate | aianswer | aicode | aiad | aianalogy | aiengrish", inline=False)
     em.add_field(name = "Colour", value = "colour | colourlist | namecolour | showcolour", inline=False)
     em.add_field(name = "Not 100% bs", value = "no | asdlkj | answer | cut | delete | guess | staats | number | randomword | execute", inline=False)
-    em.add_field(name = "100% bs", value = "aeoo | goodbot | badbot | me | sorry | whOMEGALUL", inline=False)
+    em.add_field(name = "100% bs", value = "aeoo | goodbot | badbot | me | sorry | whOMEGALUL | epicshit", inline=False)
     await ctx.send(embed = em)
 
 @help.command()
@@ -388,4 +388,10 @@ async def sorry(ctx):
 async def whOMEGALUL(ctx):
     em = discord.Embed(title = "whOMEGALUL", description = "Sends a random video making fun of Rem disappearing.", color=ctx.author.color)
     em.add_field(name = "**Syntax**", value = "whOMEGALUL", inline=False)
+    await ctx.send(embed = em)
+
+@help.command()
+async def epicshit(ctx):
+    em = discord.Embed(title = "epicshit", description = "Just follow the instructions", color=ctx.author.color)
+    em.add_field(name = "**Syntax**", value = "epicshit", inline=False)
     await ctx.send(embed = em)
