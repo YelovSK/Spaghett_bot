@@ -1,6 +1,3 @@
-import discord
-import openai
-import praw
 import asyncio
 import contextlib
 import math
@@ -11,14 +8,18 @@ import shelve
 import sys
 import time
 import urllib.request
-
 from datetime import timezone
 from decimal import Decimal
 from io import StringIO
 from os import listdir
 from os.path import getsize, isfile, join
 from pathlib import Path
+
+import discord
+import openai
+import praw
 from PIL import Image, ImageDraw, ImageFont
+from pkg_resources import CHECKOUT_DIST
 from PyDictionary import PyDictionary
 from pyowm.owm import OWM
 from spotipy import Spotify
@@ -53,7 +54,10 @@ def splitLong(text):    # todo formatting breaks if split at **word
 
 
 async def mySend(context, mssg):
-    sent_mssg = await context.send(mssg)
+    if (type(mssg) == discord.File):
+        sent_mssg = await context.send(file = mssg)
+    else:
+        sent_mssg = await context.send(mssg)
     mssg_id, channel_id = sent_mssg.id, sent_mssg.channel.id
     with open(folders_path+"//text//prev_mssg_ids.txt", "a") as f:
         f.write(f'{channel_id} {mssg_id}\n')
@@ -218,7 +222,7 @@ async def image(ctx, img_name='', *, text=''):
         img.save(folders_path+'/send/meme.png')
 
         file = discord.File(folders_path+"/send/meme.png", filename=folders_path+"/send/meme.png")
-        await mySend(ctx, file=file)
+        await mySend(ctx, file)
 
 
 @slash.slash(description='random fap image, can be sent with <folder_name>')
@@ -246,29 +250,43 @@ async def fap(message, *, folder=''):
     file = discord.File(save, filename=save)
     await mySend(message.channel, f'****Folder:**** {folder}')
     try:
-        await mySend(message, file=file)
+        await mySend(message, file)
     except Exception as error:
         await mySend(message, 'oopsie, failed to upload, error kodiQ: ' + str(error))
         await mySend(message, f'{choice} is (prolly?) too large ({size} MB)')
 
 
 @slash.slash(description='[plz delete <msg_num>] no argument deletes all messages')
-async def delete(message, number=0):
+async def delete(message, number=1):
     prev_messages = []
     with open(folders_path+"//text//prev_mssg_ids.txt") as f:
-        for mssg in f:
-            prev_messages.append(mssg.split())
+        for line in f.read().split('\n'):
+            if line == "":
+                break
+            channel_id, mssg_id = line.split()
+            try:
+                channel = client.get_channel(int(channel_id))
+                orig_mssg = await channel.fetch_message(int(mssg_id))
+                prev_messages.append(orig_mssg)
+            except:
+                print(f"Message with ID {line[1]} was prolly already deleted")
 
-    number = len(prev_messages) if not number else int(number)
+    def check(msg):
+        return msg.author == message.author and msg.channel == message.channel
+
+    if (number == "all"):
+        await message.send(f"Type 'yes' if you want to delete {len(prev_messages)} messages.")
+        msg = await client.wait_for('message', check=check)
+        if (msg.content != "yes"):
+            return
+        number = len(prev_messages)
+
     await message.send(f"Deleting {number} messages")
-    for mssg in prev_messages[-number:]:
-        channel = client.get_channel(int(mssg[0]))
-        orig_mssg = await channel.fetch_message(int(mssg[1]))
-        await orig_mssg.delete()
-    prev_messages = prev_messages[:-number]
+    for _ in range(number):
+        await prev_messages.pop().delete()
     with open(folders_path+"//text//prev_mssg_ids.txt", "w") as f:
         for mssg in prev_messages:
-            f.write(f'{mssg[0]} {mssg[1]}\n')
+            f.write(f'{mssg.channel.id} {mssg.id}\n')
 
 
 @slash.slash(description='(mostly) sfw')
@@ -289,7 +307,7 @@ async def kawaii(message, do='', image=None):
     if do and do != 'cum':
         file = discord.File(f'{folders_path}/send/kawaii/{do}',
                             filename=f'{folders_path}/send/kawaii/{do}')
-        await mySend(channel, file=file)
+        await mySend(channel, file)
         return
 
     with open(folders_path+'/text/pseudorandom_kawaii.txt', 'r') as f:
@@ -316,7 +334,7 @@ async def kawaii(message, do='', image=None):
     img.save(save)
     file = discord.File(save, filename=save)
     try:
-        await mySend(channel, file=file)
+        await mySend(channel, file)
     except Exception as error:
         await mySend(channel, 'oopsie, failed to upload kawaii')
         print(error + '\n' + choice)
@@ -578,7 +596,7 @@ async def reddit(message, sub, text=None):
                 await mySend(message, "*Couldn't find an image.*")
                 return
         await mySend(message, f'****Subreddit****: r/{sub}')
-        await mySend(message.channel, file=discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
+        await mySend(message.channel, discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
 
 
 @slash.slash(description='random coomer subreddit')
@@ -605,7 +623,7 @@ async def colour(ctx):
     img.save('colour.jpg')
     with open(folders_path+'/text/colours.txt', 'a') as f:
         f.write(f'{r} {g} {b} : ')
-    await mySend(ctx, file=discord.File("colour.jpg", "colour.jpg"))
+    await mySend(ctx, discord.File("colour.jpg", "colour.jpg"))
 
 
 @slash.slash(description='names the last generated colour')
@@ -630,7 +648,7 @@ async def showcolour(ctx, *, name):
                 r, g, b = line[:line.find(':')-1].split()
                 img = Image.new('RGB', (400, 400), (int(r), int(g), int(b)))
                 img.save(folders_path+'/send/colour.jpg')
-                await mySend(ctx, file=discord.File(folders_path+'/send/colour.jpg', folders_path+'/send/colour.jpg'))
+                await mySend(ctx, discord.File(folders_path+'/send/colour.jpg', folders_path+'/send/colour.jpg'))
                 break
 
 
@@ -651,49 +669,50 @@ async def video(ctx, *, video=''):
         if not found:
             await mySend(ctx, 'No such video.')
         else:
-            await mySend(ctx, file=discord.File(send, send))
+            await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description='when a is not enough')
+# @slash.slash(description='when a is not enough')
+@client.command(pass_context=True)
 async def AAA(ctx):
     send = folders_path+'/send/videos/AAA.mp4'
-    await mySend(ctx, file=discord.File(send, send))
+    await mySend(ctx, discord.File(send, send))
 
 
 @slash.slash(description='could i feel normal for one fucking moment please')
 async def EEE(ctx):
     send = folders_path+'/send/videos/EEE.mp4'
-    await mySend(ctx, file=discord.File(send, send))
+    await mySend(ctx, discord.File(send, send))
 
 
 @slash.slash(description='ptsd end of eva warning')
 async def AAAEEE(ctx):
     send = folders_path+'/send/videos/AAAEEE.mp4'
-    await mySend(ctx, file=discord.File(send, send))
+    await mySend(ctx, discord.File(send, send))
 
 
 @slash.slash(description='i love emilia')
 async def whOMEGALUL(ctx):
     i = random.randint(1, 4)
     send = f'{folders_path}/send/videos/who{i}.mp4'
-    await mySend(ctx, file=discord.File(send, send))
+    await mySend(ctx, discord.File(send, send))
 
 
 @slash.slash(description='plz audio <filename> (no extension)')
 async def audio(ctx, *filename):
-    await mySend(ctx, file=discord.File(f'{folders_path}/send/{" ".join(filename)}.mp3'))
+    await mySend(ctx, discord.File(f'{folders_path}/send/{" ".join(filename)}.mp3'))
 
 
 @slash.slash(description="tumblin' down")
 async def deth(ctx):
     send = folders_path+'/send/tod.mp3'
-    await mySend(ctx, file=discord.File(send, send))
+    await mySend(ctx, discord.File(send, send))
 
 
 @slash.slash(description='re:zero spook sound')
 async def aeoo(ctx):
     send = folders_path+'/send/aeoo.mp3'
-    await mySend(ctx, file=discord.File(send, send))
+    await mySend(ctx, discord.File(send, send))
 
 
 @slash.slash(description='random meme')
@@ -707,7 +726,7 @@ async def meme(ctx):
 
     img.save(save)
     file = discord.File(save, filename=save)
-    await mySend(ctx, file=file)
+    await mySend(ctx, file)
 
 
 @slash.slash(description='Cuts message into multiple lines.')
@@ -1064,7 +1083,7 @@ async def ping(message):
 @slash.slash(description="not kokot")
 async def send(ctx):
     send = folders_path+'/send/kokot.mp3'
-    await mySend(ctx, file=discord.File(send, send))
+    await mySend(ctx, discord.File(send, send))
 
 
 @slash.slash(description="Join the current voice channel")

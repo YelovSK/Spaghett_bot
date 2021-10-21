@@ -320,7 +320,7 @@ async def cut(ctx):
 
 @help.command()
 async def delete(ctx):
-    em = discord.Embed(title = "delete", description = "Deletes the last [num] messages of certain functions. Deletes all without argument.", color=ctx.author.color)
+    em = discord.Embed(title = "delete", description = "Deletes the last [num] messages of certain functions. Set [num] to 'all' to delete all messages.", color=ctx.author.color)
     em.add_field(name = "**Syntax**", value = "delete [num]", inline=False)
     await ctx.send(embed = em)
 
