@@ -60,7 +60,8 @@ async def mySend(context, mssg):
     with open(folders_path+"//text//prev_mssg_ids.txt", "a") as f:
         f.write(f'{channel_id} {mssg_id}\n')
 
-@slash.slash(description='example: 1 hour 5 minutes <message> /repeat/')
+# @slash.slash(description='example: 1 hour 5 minutes <message> /repeat/')
+@client.command(pass_context=True)
 async def remind(ctx, *, string):
     global stop
     global remindrun
@@ -100,7 +101,8 @@ async def remind(ctx, *, string):
         remindrun = False
 
 
-@slash.slash(description='is timer active?')
+# @slash.slash(description='is timer active?')
+@client.command(pass_context=True)
 async def remind_active(ctx):
     global remindrun
     if remindrun:
@@ -109,18 +111,20 @@ async def remind_active(ctx):
         await mySend(ctx, 'Nah')
 
 
-@slash.slash(description='stops timer')
+# @slash.slash(description='stops timer')
+@client.command(pass_context=True)
 async def remind_stop(ctx):
     global stop
     print('Stopped reminder')
     stop = True
 
 
-@slash.slash(description='guess number from 1 to 100')
+# @slash.slash(description='guess num from 1 to 100')
+@client.command(pass_context=True)
 async def number(ctx, *, num):
     good = []
     bad = []
-    with open(folders_path+"/text/number_answers.txt") as f:
+    with open(folders_path+"/text/num_answers.txt") as f:
         adding_good = True
         for line in f:
             line = line[:-1]
@@ -140,10 +144,11 @@ async def number(ctx, *, num):
             await mySend(ctx, f'Guessed {num}\n{random.choice(bad)}')
             print(f'Guessed {num}, was {cis}')
     except:
-        await mySend(ctx, f'Ah yes, {num} - the perfect "number". Moron.')
+        await mySend(ctx, f'Ah yes, {num} - the perfect "num". Moron.')
 
 
-@slash.slash(description='"list" / "add "word" / "define" <word : definition>')
+# @slash.slash(description='"list" / "add "word" / "define" <word : definition>')
+@client.command(pass_context=True)
 async def word(ctx, do='', *, word=''):
     dick = {}
     if len(word.split()) > 1:
@@ -182,7 +187,8 @@ async def word(ctx, do='', *, word=''):
         await mySend(ctx, send)
 
 
-@slash.slash(description='<image name> <text> / img list when no argument')
+# @slash.slash(description='<image name> <text> / img list when no argument')
+@client.command(pass_context=True)
 async def image(ctx, img_name='', *, text=''):
     if not img_name:
         await mySend(ctx, 'Send with <image_name> <text>')
@@ -223,7 +229,8 @@ async def image(ctx, img_name='', *, text=''):
         await mySend(ctx, file)
 
 
-@slash.slash(description='random fap image, can be sent with <folder_name>')
+# @slash.slash(description='random fap image, can be sent with <folder_name>')
+@client.command(pass_context=True)
 async def fap(message, *, folder=''):
     if not folder:
         with open(folders_path+"/text/fap.txt", 'r') as f:
@@ -254,8 +261,9 @@ async def fap(message, *, folder=''):
         await mySend(message, f'{choice} is (prolly?) too large ({size} MB)')
 
 
-@slash.slash(description='[plz delete <msg_num>] no argument deletes all messages')
-async def delete(message, number=1):
+# # @slash.slash(description='[plz delete <msg_num>] no argument deletes all messages')
+@client.command(pass_context=True)
+async def delete(message, num=1):
     prev_messages = []
     with open(folders_path+"//text//prev_mssg_ids.txt") as f:
         for line in f.read().split('\n'):
@@ -269,22 +277,27 @@ async def delete(message, number=1):
             except:
                 print(f"Message with ID {mssg_id} was prolly already deleted")
 
-    if (number == "all"):
+    with open(folders_path+"//text//prev_mssg_ids.txt", "w") as f:  # to clear broken messages
+        for mssg in prev_messages:
+            f.write(f'{mssg.channel.id} {mssg.id}\n')
+
+    if (num == -1):
         await message.send(f"Type 'yes' if you want to delete {len(prev_messages)} messages.")
         msg = await client.wait_for('message', check=lambda m: m.author == message.author)
         if (msg.content != "yes"):
             return
-        number = len(prev_messages)
+        num = len(prev_messages)
 
-    await message.send(f"Deleting {number} messages")
-    for _ in range(number):
+    await message.send(f"Deleting {num} messages")
+    for _ in range(num):
         await prev_messages.pop().delete()
     with open(folders_path+"//text//prev_mssg_ids.txt", "w") as f:
         for mssg in prev_messages:
             f.write(f'{mssg.channel.id} {mssg.id}\n')
 
 
-@slash.slash(description='(mostly) sfw')
+# @slash.slash(description='(mostly) sfw')
+@client.command(pass_context=True)
 async def kawaii(message, do='', image=None):
     channel = message.channel
 #     if str(message.author) not in users_allowed:
@@ -337,7 +350,8 @@ async def kawaii(message, do='', image=None):
         await kawaii(message, 'cum')
 
 
-@slash.slash(description='higher-lower game //0 to 10000//')
+# @slash.slash(description='higher-lower game //0 to 10000//')
+@client.command(pass_context=True)
 async def guess(message, *, num):
     channel = message.channel
     change = False
@@ -384,13 +398,15 @@ tries\n{curr_user[:curr_user.find("#")]} guessed correctly
             file.write(f'{current}\n{int(guesses)+1}\n')
 
 
-@slash.slash(description='you')
+# @slash.slash(description='you')
+@client.command(pass_context=True)
 async def me(message):
     channel = message.channel
     await mySend(channel, message.author)
 
 
-@slash.slash(description='random swear word')
+# @slash.slash(description='random swear word')
+@client.command(pass_context=True)
 async def fuck(message):
     with open(folders_path+'/text/swear.txt', 'r') as file:
         words = [line for line in file]
@@ -398,7 +414,8 @@ async def fuck(message):
     await mySend(message, random.choice(words))
 
 
-@slash.slash(description='insults <discord_name>')
+# @slash.slash(description='insults <discord_name>')
+@client.command(pass_context=True)
 async def insult(message, *, ping):
     channel = message.channel
     found = False
@@ -437,7 +454,8 @@ async def insult(message, *, ping):
             await mySend(channel, f"<@{name}> go {act}, you {adj} {noun}.")
 
 
-@slash.slash(description='4-20 A-s')
+# @slash.slash(description='4-20 A-s')
+@client.command(pass_context=True)
 async def a(message):
     channel = message.channel
     auth = str(message.author)[:str(message.author).find('#')]
@@ -482,7 +500,8 @@ async def a(message):
                 f.write(f'{name} {int(stat[0])} {int(stat[1])} {int(stat[2])}\n')
 
 
-@slash.slash(description="{All guesses/full-length}. Argument <all> for everyone's stats.")
+# @slash.slash(description="{All guesses/full-length}. Argument <all> for everyone's stats.")
+@client.command(pass_context=True)
 async def staats(message, everyone=''):
     stats = {}
     channel = message.channel
@@ -514,7 +533,8 @@ async def staats(message, everyone=''):
         await mySend(message, out)
 
 
-@slash.slash(description='sad')
+# @slash.slash(description='sad')
+@client.command(pass_context=True)
 async def badbot(message):
     channel = message.channel
     string = str(message.author)
@@ -522,12 +542,14 @@ async def badbot(message):
     await mySend(channel, f'{string} go commit die')
 
 
-@slash.slash(description='owo')
+# @slash.slash(description='owo')
+@client.command(pass_context=True)
 async def goodbot(ctx):
     await mySend(ctx, 'ty')
 
 
-@slash.slash(description='when u feel bad')
+# @slash.slash(description='when u feel bad')
+@client.command(pass_context=True)
 async def f(ctx):
     with open(folders_path+'/text/f.txt', 'r') as f:
         order = []
@@ -548,13 +570,15 @@ async def f(ctx):
     await mySend(ctx, choice)
 
 
-@slash.slash(description='add something bad / sad / angry / depressing')
+# @slash.slash(description='add something bad / sad / angry / depressing')
+@client.command(pass_context=True)
 async def addf(ctx, *, string):
     with open(folders_path+'/text/f.txt', 'a') as file:
         file.write(f'{string}\n')
 
 
-@slash.slash(description='image from <subreddit>, add "text" at the end for text posts')
+# @slash.slash(description='image from <subreddit>, add "text" at the end for text posts')
+@client.command(pass_context=True)
 async def reddit(message, sub, text=None):
     with open(folders_path+'/text/reddit.txt', 'r') as f:
         data = [line[:-1] for line in f]
@@ -593,7 +617,8 @@ async def reddit(message, sub, text=None):
         await mySend(message.channel, discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
 
 
-@slash.slash(description='random coomer subreddit')
+# @slash.slash(description='random coomer subreddit')
+@client.command(pass_context=True)
 async def coomer(message):
     channel = message.channel
 
@@ -610,7 +635,8 @@ sooorry, seems like your reddit karma is too low""")
     await reddit(message, chose)
 
 
-@slash.slash(description='generates a random colour')
+# @slash.slash(description='generates a random colour')
+@client.command(pass_context=True)
 async def colour(ctx):
     r, g, b = random.randrange(256), random.randrange(256), random.randrange(256)
     img = Image.new('RGB', (400, 400), (r, g, b))
@@ -620,13 +646,15 @@ async def colour(ctx):
     await mySend(ctx, discord.File("colour.jpg", "colour.jpg"))
 
 
-@slash.slash(description='names the last generated colour')
+# @slash.slash(description='names the last generated colour')
+@client.command(pass_context=True)
 async def namecolour(ctx, *, name):
     with open(folders_path+'/text/colours.txt', 'a') as f:
         f.write(f'{name}\n')
 
 
-@slash.slash(description='lists named colours')
+# @slash.slash(description='lists named colours')
+@client.command(pass_context=True)
 async def colourlist(ctx):
     with open(folders_path+'/text/colours.txt', 'r') as f:
         arr = [line[line.find(':')+2: -1] for line in f]
@@ -634,7 +662,8 @@ async def colourlist(ctx):
     await mySend(ctx, send)
 
 
-@slash.slash(description='shows <name> colour')
+# @slash.slash(description='shows <name> colour')
+@client.command(pass_context=True)
 async def showcolour(ctx, *, name):
     with open(folders_path+'/text/colours.txt', 'r') as f:
         for line in f:
@@ -646,7 +675,8 @@ async def showcolour(ctx, *, name):
                 break
 
 
-@slash.slash(description='<video_name> / lists videos when no argument')
+# @slash.slash(description='<video_name> / lists videos when no argument')
+@client.command(pass_context=True)
 async def video(ctx, *, video=''):
     path = folders_path+'/send/videos'
     videos = [f for f in listdir(path) if isfile(join(path, f)) and (f[-4:] == '.mp4')]
@@ -666,50 +696,57 @@ async def video(ctx, *, video=''):
             await mySend(ctx, discord.File(send, send))
 
 
-# @slash.slash(description='when a is not enough')
+# # @slash.slash(description='when a is not enough')
 @client.command(pass_context=True)
 async def AAA(ctx):
     send = folders_path+'/send/videos/AAA.mp4'
     await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description='could i feel normal for one fucking moment please')
+# @slash.slash(description='could i feel normal for one fucking moment please')
+@client.command(pass_context=True)
 async def EEE(ctx):
     send = folders_path+'/send/videos/EEE.mp4'
     await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description='ptsd end of eva warning')
+# @slash.slash(description='ptsd end of eva warning')
+@client.command(pass_context=True)
 async def AAAEEE(ctx):
     send = folders_path+'/send/videos/AAAEEE.mp4'
     await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description='i love emilia')
+# @slash.slash(description='i love emilia')
+@client.command(pass_context=True)
 async def whOMEGALUL(ctx):
     i = random.randint(1, 4)
     send = f'{folders_path}/send/videos/who{i}.mp4'
     await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description='plz audio <filename> (no extension)')
+# @slash.slash(description='plz audio <filename> (no extension)')
+@client.command(pass_context=True)
 async def audio(ctx, *filename):
     await mySend(ctx, discord.File(f'{folders_path}/send/{" ".join(filename)}.mp3'))
 
 
-@slash.slash(description="tumblin' down")
+# @slash.slash(description="tumblin' down")
+@client.command(pass_context=True)
 async def deth(ctx):
     send = folders_path+'/send/tod.mp3'
     await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description='re:zero spook sound')
+# @slash.slash(description='re:zero spook sound')
+@client.command(pass_context=True)
 async def aeoo(ctx):
     send = folders_path+'/send/aeoo.mp3'
     await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description='random meme')
+# @slash.slash(description='random meme')
+@client.command(pass_context=True)
 async def meme(ctx):
     path = folders_path+"\memes"
     files = [f for f in listdir(path) if isfile(join(path, f))]
@@ -723,7 +760,8 @@ async def meme(ctx):
     await mySend(ctx, file)
 
 
-@slash.slash(description='Cuts message into multiple lines.')
+# @slash.slash(description='Cuts message into multiple lines.')
+@client.command(pass_context=True)
 async def cut(ctx, *, message):
     send = ''
     if len(message.split()) == 1:
@@ -735,7 +773,8 @@ async def cut(ctx, *, message):
     await mySend(ctx, send)
 
 
-@slash.slash(description='Argument is the name of the text file to be sent.')
+# @slash.slash(description='Argument is the name of the text file to be sent.')
+@client.command(pass_context=True)
 async def text(message, filename=''):
     if not filename:
         await mySend(message, 'specify file name')
@@ -747,7 +786,8 @@ async def text(message, filename=''):
         await mySend(message, out)
 
 
-@slash.slash(description='You can specify with argument, e.g. "temperature", "humidity", ..')
+# @slash.slash(description='You can specify with argument, e.g. "temperature", "humidity", ..')
+@client.command(pass_context=True)
 async def weather(ctx, *, specify=''):
     owm = OWM(keys['owm'])
     mgr = owm.weather_manager()
@@ -802,7 +842,8 @@ async def weather(ctx, *, specify=''):
         await mySend(ctx, f'''**{specify.capitalize()}:** {send}''')
 
 
-@slash.slash(description='When you need a sincere apology. Name of user as an argument.')
+# @slash.slash(description='When you need a sincere apology. Name of user as an argument.')
+@client.command(pass_context=True)
 async def sorry(message, name=''):
     channel = message.channel
     curr_user = str(message.author)[:str(message.author).find("#")]
@@ -830,7 +871,8 @@ or mby it was someone's nickname, but i deleted that cuz of some bug i can't be 
         await mySend(channel, f"<@{name_d}> {send}")
 
 
-@slash.slash(description='2000 random characters')
+# @slash.slash(description='2000 random characters')
+@client.command(pass_context=True)
 async def asdlkj(message):
     if str(message.author)[:str(message.author).find('#')] != "Yelov":
         await mySend(message, 'What is asdlkj. Wtf do u want from me. Stop typing random shit on your keyboard.')
@@ -839,7 +881,8 @@ async def asdlkj(message):
     await mySend(message, send)
 
 
-@slash.slash(description='Magic 8-ball')
+# @slash.slash(description='Magic 8-ball')
+@client.command(pass_context=True)
 async def answer(message, *, question):
     auth = str(message.author)[:str(message.author).find("#")]
     yes = ("for sure dawg", "you fucking bet", "you didn't even have to ask",
@@ -854,7 +897,8 @@ async def answer(message, *, question):
 # @client.command(pass_context=True)
 
 
-@slash.slash(description='Random entry if no argument. [word] - word to find, [additional] - "count" / "allinfo" / "random"')
+# @slash.slash(description='Random entry if no argument. [word] - word to find, [additional] - "count" / "allinfo" / "random"')
+@client.command(pass_context=True)
 async def journal(message, word='', additional=""):
 
     class Journal:
@@ -997,7 +1041,8 @@ async def journal(message, word='', additional=""):
         await mySend(message, journal_text)
 
 
-@slash.slash(description='Random message from Discord. Argument specifies the channel, default is "main"')
+# @slash.slash(description='Random message from Discord. Argument specifies the channel, default is "main"')
+@client.command(pass_context=True)
 async def sadboyz(message, channel='main', user=''):
     with open(f'{folders_path}/SadBoyz/{channel}.txt', 'r', errors='ignore') as file:
         arr = []
@@ -1023,7 +1068,8 @@ async def sadboyz(message, channel='main', user=''):
         await mySend(message, out)
 
 
-@slash.slash(description="plz dict <word> <define/synonyms/antonyms>")
+# @slash.slash(description="plz dict <word> <define/synonyms/antonyms>")
+@client.command(pass_context=True)
 async def dict(message, *, word_do=''):
     if len(word_do.split()) != 2:
         await mySend(message, 'What word am I supposed to find dumbo')
@@ -1051,14 +1097,16 @@ async def dict(message, *, word_do=''):
     await mySend(message, output)
 
 
-@slash.slash(description="Random word from a dictionary")
+# @slash.slash(description="Random word from a dictionary")
+@client.command(pass_context=True)
 async def randomword(message):
     with open(folders_path+'/text/words_alpha.txt', 'r') as f:
         words = [line[:-1] for line in f]
     await mySend(message, random.choice(words))
 
 
-@slash.slash(description="no")
+# @slash.slash(description="no")
+@client.command(pass_context=True)
 async def no(message):
     out = ''
     out += '‎\n'*30
@@ -1067,18 +1115,21 @@ async def no(message):
         time.sleep(4)
 
 
-@slash.slash(description="Latency")
+# @slash.slash(description="Latency")
+@client.command(pass_context=True)
 async def ping(message):
     await mySend(message, f'Pong! {round(client.latency,2)}s')
 
 
-@slash.slash(description="not kokot")
+# @slash.slash(description="not kokot")
+@client.command(pass_context=True)
 async def send(ctx):
     send = folders_path+'/send/kokot.mp3'
     await mySend(ctx, discord.File(send, send))
 
 
-@slash.slash(description="Join the current voice channel")
+# @slash.slash(description="Join the current voice channel")
+@client.command(pass_context=True)
 async def joinvc(message):
     if not message.author.voice:
         await mySend(message, "You aren't connected to a voice channel")
@@ -1087,7 +1138,7 @@ async def joinvc(message):
         channel = message.author.voice.channel
     await channel.connect()
 
-# @slash.slash(description="Plays a song. Search by YT/Spotify link or name. Optional [vol={XYZ}].")
+# # @slash.slash(description="Plays a song. Search by YT/Spotify link or name. Optional [vol={XYZ}].")
 
 
 @client.command(pass_context=True)
@@ -1211,7 +1262,8 @@ async def play(message, *, url):
     await mySend(message, f"Playing **{title}**\n{link}\nCommands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave")
 
 
-@slash.slash(description="Plays an audio file in voice chat")
+# @slash.slash(description="Plays an audio file in voice chat")
+@client.command(pass_context=True)
 async def playfile(ctx, *, url):
     song_there = os.path.isfile(url)
     voiceChannel = discord.utils.get(ctx.guild.voice_channels)
@@ -1229,7 +1281,7 @@ async def playfile(ctx, *, url):
     voice.play(discord.FFmpegPCMAudio(url))
     await mySend(ctx, f"Playing {url}")
 
-# @slash.slash(description="Leaves the current voice channel")
+# # @slash.slash(description="Leaves the current voice channel")
 
 
 @client.command(pass_context=True)
@@ -1244,7 +1296,7 @@ async def leave(ctx):
         await mySend(ctx, "I'm not connected ya dingus")
 
 
-# @slash.slash(description="Pauses music")
+# # @slash.slash(description="Pauses music")
 @client.command(pass_context=True)
 async def pause(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
@@ -1257,7 +1309,7 @@ async def pause(ctx):
         await mySend(ctx, "Not playin' anything")
 
 
-# @slash.slash(description="Resumes music")
+# # @slash.slash(description="Resumes music")
 @client.command(pass_context=True)
 async def resume(ctx):
     global current_song
@@ -1270,22 +1322,22 @@ async def resume(ctx):
     else:
         await mySend(ctx, "Shit's not paused yo")
 
-# @slash.slash(description="Skips song")
+# # @slash.slash(description="Skips song")
 @client.command(pass_context=True)
-async def skip(ctx, number=1):
+async def skip(ctx, num=1):
     global song_queue
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
         await mySend(ctx, "Not connected")
     elif len(song_queue) > 0:
         voice.stop()
-        if number > 1:
-            song_queue = song_queue[number-1:]
+        if num > 1:
+            song_queue = song_queue[num-1:]
         await mySend(ctx, f"Now playing **{song_queue[0]}**")
     else:
         await mySend(ctx, "The queue is empty")
 
-# @slash.slash(description="Prints song queue")
+# # @slash.slash(description="Prints song queue")
 
 
 @client.command(pass_context=True)
@@ -1299,7 +1351,7 @@ async def queue(ctx):
         res += f"**.. and {len(song_queue)-10} other songs**"
     await mySend(ctx, "**Current queue:**\n" + res)
 
-# @slash.slash(description="Clears song queue")
+# # @slash.slash(description="Clears song queue")
 
 
 @client.command(pass_context=True)
@@ -1308,7 +1360,7 @@ async def clearqueue(ctx):
     song_queue = []
     await mySend(ctx, "Song queue cleared")
 
-# @slash.slash(description="Stops music")
+# # @slash.slash(description="Stops music")
 
 
 @client.command(pass_context=True)
@@ -1324,7 +1376,7 @@ async def stop(ctx):
     else:
         await mySend(ctx, "Music isn't playing")
 
-# @slash.slash(description="Changes volume (broken)")
+# # @slash.slash(description="Changes volume (broken)")
 
 
 @client.command(pass_context=True)
@@ -1335,7 +1387,7 @@ async def volume(ctx, *, volume):
     elif 0 <= int(volume) <= 100:
         voice.source.volume = float(volume) / 100
 
-# @slash.slash(description="Prints current volume")
+# # @slash.slash(description="Prints current volume")
 
 
 @client.command(pass_context=True)
