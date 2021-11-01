@@ -198,35 +198,33 @@ async def image(ctx, img_name='', *, text=''):
         for file in files:
             send += f'{file}\n'
         await mySend(ctx, f'Image list:\n{send}')
-    else:
-        basewidth = 1200
-        split = [img_name, text]
-        num = split[0]
-        try:
-            img = Image.open(f'{folders_path}/imgs/{num}.png')
-        except:
-            img = Image.open(f'{folders_path}/imgs/{num}.jpg')
+        return
 
-        wpercent = (basewidth/float(img.size[0]))
-        hsize = int((float(img.size[1])*float(wpercent)))
-        img = img.resize((basewidth, hsize), Image.ANTIALIAS)
-        draw = ImageDraw.Draw(img)
+    basewidth = 1200
+    split = [img_name, text]
+    num = split[0]
+    try:
+        img = Image.open(f'{folders_path}/imgs/{num}.png')
+    except:
+        img = Image.open(f'{folders_path}/imgs/{num}.jpg')
 
-        message = ''.join(f'{i} ' for i in split[1:])
+    wpercent = (basewidth/float(img.size[0]))
+    hsize = int((float(img.size[1])*float(wpercent)))
+    img = img.resize((basewidth, hsize), Image.ANTIALIAS)
+    draw = ImageDraw.Draw(img)
 
-        chars = len(message)
-        font = ImageFont.truetype("font.ttf", int((basewidth+230)/((chars/2)+4)))
-        fontsize = int((basewidth+230)/((chars/2)+3))
-        w, h = draw.textsize(message, font=font)
-        draw.text(((img.width-w)/2, img.height-(fontsize/1.2)-30), message, font=font, fill='black')
-        font = ImageFont.truetype("font.ttf", int((basewidth+200)/((chars/2)+4)))
-        fontsize = int((basewidth+200)/((chars/2)+3))
-        w, h = draw.textsize(message, font=font)
-        draw.text(((img.width-w)/2, img.height-(fontsize/1.2)-30), message, font=font, fill='white')
-        img.save(folders_path+'/send/meme.png')
+    message = ''.join(f'{i} ' for i in split[1:])
 
-        file = discord.File(folders_path+"/send/meme.png", filename=folders_path+"/send/meme.png")
-        await mySend(ctx, file)
+    charCount = len(message)
+    for offset, col in ((230, "black"), (200, "white")):
+        font = ImageFont.truetype("font.ttf", int((basewidth+offset)/((charCount/2)+4)))
+        fontsize = int((basewidth+offset)/((charCount/2)+3))
+        w, _ = draw.textsize(message, font=font)
+        draw.text(((img.width-w)/2, img.height-(fontsize/1.2)-30), message, font=font, fill=col)
+    img.save(folders_path+'/send/meme.png')
+
+    file = discord.File(folders_path+"/send/meme.png", filename=folders_path+"/send/meme.png")
+    await mySend(ctx, file)
 
 
 # @slash.slash(description='random fap image, can be sent with <folder_name>')
@@ -435,23 +433,24 @@ async def insult(message, *, ping):
     if ping.lower() == 'spaghett bot':
         with open(folders_path+"/text/insult_bot_message.txt") as f:
             await mySend(message, f.read().replace("*name*", f"<@{name}>"))
-    else:
-        for i in 'nouns', 'adjectives', 'actions':
-            with open(f'{folders_path}+/text/{i}.txt', 'r') as file:
-                if i == 'nouns':
-                    nouns = [line[:-1] for line in file]
-                elif i == 'adjectives':
-                    adjectives = [line[:-1] for line in file]
-                elif i == 'actions':
-                    actions = [line[:-1] for line in file]
+            return
 
-        if not found:
-            await mySend(channel, 'No such member. Dumb fuck.')
-        else:
-            adj = random.choice(adjectives)
-            noun = random.choice(nouns)
-            act = random.choice(actions)
-            await mySend(channel, f"<@{name}> go {act}, you {adj} {noun}.")
+    for i in 'nouns', 'adjectives', 'actions':
+        with open(f'{folders_path}+/text/{i}.txt', 'r') as file:
+            if i == 'nouns':
+                nouns = [line[:-1] for line in file]
+            elif i == 'adjectives':
+                adjectives = [line[:-1] for line in file]
+            elif i == 'actions':
+                actions = [line[:-1] for line in file]
+
+    if not found:
+        await mySend(channel, 'No such member. Dumb fuck.')
+    else:
+        adj = random.choice(adjectives)
+        noun = random.choice(nouns)
+        act = random.choice(actions)
+        await mySend(channel, f"<@{name}> go {act}, you {adj} {noun}.")
 
 
 # @slash.slash(description='4-20 A-s')
@@ -603,18 +602,19 @@ async def reddit(message, sub, text=None):
             except:
                 pass
         await mySend(message, 'No post with selftext.')
-    else:
-        for post in posts:
-            url = post.url
-            ext = url[-4:]
-            if ext in (".jpg", ".png"):
-                urllib.request.urlretrieve(url, folders_path+'/send/reddit.png')
-                break
-            if post == posts[-1]:
-                await mySend(message, "*Couldn't find an image.*")
-                return
-        await mySend(message, f'****Subreddit****: r/{sub}')
-        await mySend(message.channel, discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
+        return
+
+    for post in posts:
+        url = post.url
+        ext = url[-4:]
+        if ext in (".jpg", ".png"):
+            urllib.request.urlretrieve(url, folders_path+'/send/reddit.png')
+            break
+        if post == posts[-1]:
+            await mySend(message, "*Couldn't find an image.*")
+            return
+    await mySend(message, f'****Subreddit****: r/{sub}')
+    await mySend(message.channel, discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
 
 
 # @slash.slash(description='random coomer subreddit')
@@ -684,16 +684,17 @@ async def video(ctx, *, video=''):
     if not video:
         vid_list = ''.join(f"{vid[:vid.find('.')]}, " for vid in videos)
         await mySend(ctx, f'List of videos: {vid_list}')
+        return
+
+    found = False
+    for vid in videos:
+        if vid[:vid.find('.')] == video:
+            found = True
+            send = f'{folders_path}/send/videos/{vid}'
+    if not found:
+        await mySend(ctx, 'No such video.')
     else:
-        found = False
-        for vid in videos:
-            if vid[:vid.find('.')] == video:
-                found = True
-                send = f'{folders_path}/send/videos/{vid}'
-        if not found:
-            await mySend(ctx, 'No such video.')
-        else:
-            await mySend(ctx, discord.File(send, send))
+        await mySend(ctx, discord.File(send, send))
 
 
 # # @slash.slash(description='when a is not enough')
@@ -899,7 +900,7 @@ async def answer(message, *, question):
 
 # @slash.slash(description='Random entry if no argument. [word] - word to find, [additional] - "count" / "allinfo" / "random"')
 @client.command(pass_context=True)
-async def journal(message, word='', additional=""):
+async def journal(message, word="", additional=""):
 
     class Journal:
 
