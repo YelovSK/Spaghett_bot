@@ -52,7 +52,7 @@ def splitLong(text):    # todo formatting breaks if split at **word
     return mssgs
 
 async def mySend(context, mssg):
-    if (type(mssg) == discord.File):
+    if type(mssg) == discord.File:
         sent_mssg = await context.send(file = mssg)
     else:
         sent_mssg = await context.send(mssg)
@@ -279,10 +279,10 @@ async def delete(message, num=1):
         for mssg in prev_messages:
             f.write(f'{mssg.channel.id} {mssg.id}\n')
 
-    if (num == -1):
+    if num == -1:
         await message.send(f"Type 'yes' if you want to delete {len(prev_messages)} messages.")
         msg = await client.wait_for('message', check=lambda m: m.author == message.author)
-        if (msg.content != "yes"):
+        if msg.content != "yes":
             return
         num = len(prev_messages)
 
@@ -1091,6 +1091,9 @@ async def dict(message, *, word_do=''):
             words = dictionary.synonym(word)
         else:
             words = dictionary.antonym(word)
+        if not words:
+            await mySend(message, "Didn't find any words")
+            return
         output += f'**{do.capitalize()} of {word}:** '
         for word in words:
             output += f'{word}, '
@@ -1111,9 +1114,7 @@ async def randomword(message):
 async def no(message):
     out = ''
     out += '‎\n'*30
-    while True:
-        await mySend(message, out)
-        time.sleep(4)
+    await mySend(message, out)
 
 
 # @slash.slash(description="Latency")
@@ -1183,9 +1184,8 @@ async def play(message, *, url):
                 auth_manager = SpotifyClientCredentials(
                     'bf8f3c6a05c249fcadb039311742fd07', 'e16b16e950974ddd9175976b16be3671')
                 sp = Spotify(auth_manager=auth_manager)
-                tracks = []
                 result = sp.playlist_items(url, additional_types=['track'])
-                tracks.extend(result['items'])
+                tracks = result['items']
 
                 while result['next']:
                     result = sp.next(result)
@@ -1234,6 +1234,7 @@ async def play(message, *, url):
         current_song = title
 
         with YoutubeDL(ydl_opts) as ydl:
+            print("Downloading", title)
             ydl.download([link])
         for file in listdir(folders_path+"/./send"):
             if file.startswith('ytdl'):
