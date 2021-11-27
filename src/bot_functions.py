@@ -7,6 +7,7 @@ import re
 import shelve
 import sys
 import time
+import requests
 import urllib.request
 import tensorboxsdk as tb
 from datetime import timezone
@@ -1702,3 +1703,23 @@ async def gptj(ctx, *, input_text): # XD ran out of credits
         return
     await mssg.delete()
     await my_send(ctx, input_text + result["output"])
+
+@client.command(pass_context=True)
+async def j1(ctx, *, input_text):
+    mssg = await ctx.send("generating, gimme a sec..")
+    res = requests.post(
+        "https://api.ai21.com/studio/v1/j1-jumbo/complete",
+        headers={"Authorization": f"Bearer {keys['ai21']}"},
+        json={
+            "prompt": input_text, 
+            "numResults": 1, 
+            "maxTokens": 50, 
+            "stopSequences": ["\n"],
+            "topKReturn": 0,
+            "temperature": 0.75
+        }
+    )
+    await mssg.delete()
+    data = res.json()
+    output = data['completions'][0]['data']['text']
+    await my_send(ctx, input_text + output)
