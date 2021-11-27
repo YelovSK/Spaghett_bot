@@ -19,6 +19,7 @@ async def help(ctx):
     em.add_field(name = "Media", value = "audio | image | text | video | meme", inline=False)
     em.add_field(name = "Play music", value = "play | leave | pause | resume | skip | queue | clearqueue | stop | volume | currentvolume", inline=False)
     em.add_field(name = "GPT3 AI", value = "aigenerate | aianswer | aicode | aiad | aianalogy | aiengrish", inline=False)
+    em.add_field(name = "GPT-J AI", value = "gptj", inline=False)
     em.add_field(name = "Colour", value = "colour | colourlist | namecolour | showcolour", inline=False)
     em.add_field(name = "Not 100% bs", value = "no | asdlkj | answer | cut | delete | guess | staats | number | randomword | execute", inline=False)
     em.add_field(name = "100% bs", value = "aeoo | goodbot | badbot | me | sorry | whOMEGALUL | epicshit", inline=False)
@@ -394,4 +395,10 @@ async def whOMEGALUL(ctx):
 async def epicshit(ctx):
     em = discord.Embed(title = "epicshit", description = "Just follow the instructions", color=ctx.author.color)
     em.add_field(name = "**Syntax**", value = "epicshit", inline=False)
+    await ctx.send(embed = em)
+
+@help.command()
+async def gptj(ctx):
+    em = discord.Embed(title = "gptj", description = "Continues generation from input", color=ctx.author.color)
+    em.add_field(name = "**Syntax**", value = "gtpj <input>", inline=False)
     await ctx.send(embed = em)

@@ -8,6 +8,7 @@ import shelve
 import sys
 import time
 import urllib.request
+import tensorboxsdk as tb
 from datetime import timezone
 from decimal import Decimal
 from io import StringIO
@@ -42,7 +43,7 @@ with open("ClientKey.txt") as f:
         keys[key] = val
 
 
-def splitLong(text):    # todo formatting breaks if split at **word
+def split_long(text):    # todo formatting breaks if split at **word
     mssgs = []
     for _ in range((len(text)//2000) + 1):
         mssgs.append(text[:2000])
@@ -51,7 +52,7 @@ def splitLong(text):    # todo formatting breaks if split at **word
         mssgs.append(text)
     return mssgs
 
-async def mySend(context, mssg):
+async def my_send(context, mssg):
     if type(mssg) == discord.File:
         sent_mssg = await context.send(file = mssg)
     else:
@@ -79,13 +80,13 @@ async def remind(ctx, *, string):
             break
         send += f'{prvok} '
     if min:
-        await mySend(ctx, f'Reminding in {when} minutes')
+        await my_send(ctx, f'Reminding in {when} minutes')
         mul = 60
     else:
         if when % 1 == 0:
-            await mySend(ctx, f'Reminding in {round(when)} hours')
+            await my_send(ctx, f'Reminding in {round(when)} hours')
         else:
-            await mySend(ctx, f'Reminding in {round(when // 1)}h{round((when % 1) * 60)}m')
+            await my_send(ctx, f'Reminding in {round(when // 1)}h{round((when % 1) * 60)}m')
         mul = 3600
     remindrun = True
     if repeat:
@@ -94,10 +95,10 @@ async def remind(ctx, *, string):
             if stop:
                 break
             await asyncio.sleep(round(when * mul))
-            await mySend(ctx, send)
+            await my_send(ctx, send)
     else:
         await asyncio.sleep(round(when * mul))
-        await mySend(ctx, send)
+        await my_send(ctx, send)
         remindrun = False
 
 
@@ -106,9 +107,9 @@ async def remind(ctx, *, string):
 async def remind_active(ctx):
     global remindrun
     if remindrun:
-        await mySend(ctx, 'Ye')
+        await my_send(ctx, 'Ye')
     else:
-        await mySend(ctx, 'Nah')
+        await my_send(ctx, 'Nah')
 
 
 # @slash.slash(description='stops timer')
@@ -139,12 +140,12 @@ async def number(ctx, *, num):
         numint = int(num)
         cis = random.randint(1, 100)
         if numint == cis:
-            await mySend(ctx, f'Guessed {num}\n{random.choice(good)}')
+            await my_send(ctx, f'Guessed {num}\n{random.choice(good)}')
         else:
-            await mySend(ctx, f'Guessed {num}\n{random.choice(bad)}')
+            await my_send(ctx, f'Guessed {num}\n{random.choice(bad)}')
             print(f'Guessed {num}, was {cis}')
     except:
-        await mySend(ctx, f'Ah yes, {num} - the perfect "num". Moron.')
+        await my_send(ctx, f'Ah yes, {num} - the perfect "num". Moron.')
 
 
 # @slash.slash(description='"list" / "add "word" / "define" <word : definition>')
@@ -157,7 +158,7 @@ async def word(ctx, do='', *, word=''):
         definition.strip()
 
     if not do:
-        await mySend(ctx, '"list" / "define <word>" / "add <word : definition>"')
+        await my_send(ctx, '"list" / "define <word>" / "add <word : definition>"')
 
     elif do in 'add':
         with open(folders_path+'/text/dictionary.txt', 'r') as file:
@@ -175,7 +176,7 @@ async def word(ctx, do='', *, word=''):
             for line in file:
                 index = line.find(':')
                 if line[:index-1] == word:
-                    await mySend(ctx, f'Definition of {word} -> {line[index+2:]}')
+                    await my_send(ctx, f'Definition of {word} -> {line[index+2:]}')
 
     elif do == 'list':
         send = ''
@@ -184,20 +185,20 @@ async def word(ctx, do='', *, word=''):
             for line in file:
                 index = line.find(':')
                 send += f'{line[:index-1]}\n'
-        await mySend(ctx, send)
+        await my_send(ctx, send)
 
 
 # @slash.slash(description='<image name> <text> / img list when no argument')
 @client.command(pass_context=True)
 async def image(ctx, img_name='', *, text=''):
     if not img_name:
-        await mySend(ctx, 'Send with <image_name> <text>')
+        await my_send(ctx, 'Send with <image_name> <text>')
         send, path = "", f"{folders_path}/imgs"
         files = [f[:-4] for f in listdir(path) if isfile(join(path, f))]
 
         for file in files:
             send += f'{file}\n'
-        await mySend(ctx, f'Image list:\n{send}')
+        await my_send(ctx, f'Image list:\n{send}')
         return
 
     basewidth = 1200
@@ -224,7 +225,7 @@ async def image(ctx, img_name='', *, text=''):
     img.save(folders_path+'/send/meme.png')
 
     file = discord.File(folders_path+"/send/meme.png", filename=folders_path+"/send/meme.png")
-    await mySend(ctx, file)
+    await my_send(ctx, file)
 
 
 # @slash.slash(description='random fap image, can be sent with <folder_name>')
@@ -242,7 +243,7 @@ async def fap(message, *, folder=''):
     size = round(getsize(final_path) / 1048576, 2)
     while size > 8:
         size = round(getsize(final_path) / 1048576, 2)
-        await mySend(message, f'{choice} is too large ({size} MB)')
+        await my_send(message, f'{choice} is too large ({size} MB)')
         choice = random.choice(files)
         final_path = f'{path}\{choice}'
     img = Image.open(final_path)
@@ -251,12 +252,12 @@ async def fap(message, *, folder=''):
 
     img.save(save)
     file = discord.File(save, filename=save)
-    await mySend(message.channel, f'****Folder:**** {folder}')
+    await my_send(message.channel, f'****Folder:**** {folder}')
     try:
-        await mySend(message, file)
+        await my_send(message, file)
     except Exception as error:
-        await mySend(message, 'oopsie, failed to upload, error kodiQ: ' + str(error))
-        await mySend(message, f'{choice} is (prolly?) too large ({size} MB)')
+        await my_send(message, 'oopsie, failed to upload, error kodiQ: ' + str(error))
+        await my_send(message, f'{choice} is (prolly?) too large ({size} MB)')
 
 
 # # @slash.slash(description='[plz delete <msg_num>] no argument deletes all messages')
@@ -312,7 +313,7 @@ async def kawaii(message, do='', image=None):
     if do and do != 'cum':
         file = discord.File(f'{folders_path}/send/kawaii/{do}',
                             filename=f'{folders_path}/send/kawaii/{do}')
-        await mySend(channel, file)
+        await my_send(channel, file)
         return
 
     with open(folders_path+'/text/pseudorandom_kawaii.txt', 'r') as f:
@@ -339,9 +340,9 @@ async def kawaii(message, do='', image=None):
     img.save(save)
     file = discord.File(save, filename=save)
     try:
-        await mySend(channel, file)
+        await my_send(channel, file)
     except Exception as error:
-        await mySend(channel, 'oopsie, failed to upload kawaii')
+        await my_send(channel, 'oopsie, failed to upload kawaii')
         print(error + '\n' + choice)
     if do:
         await asyncio.sleep(3600*4)
@@ -372,7 +373,7 @@ async def guess(message, *, num):
                 guesses = line[:-1]
 
     if int(current) == int(num):
-        await mySend(channel, f'''Guessed in {int(guesses)+1}
+        await my_send(channel, f'''Guessed in {int(guesses)+1}
 tries\n{curr_user[:curr_user.find("#")]} guessed correctly
 {users[curr_user]+1} times''')
         change = True
@@ -389,9 +390,9 @@ tries\n{curr_user[:curr_user.find("#")]} guessed correctly
                     file.write(f'{name} {points}\n')
     else:
         if int(num) < int(current):
-            await mySend(channel, 'Higher')
+            await my_send(channel, 'Higher')
         else:
-            await mySend(channel, 'Lower')
+            await my_send(channel, 'Lower')
         with open(folders_path+'/text/guess.txt', 'w') as file:
             file.write(f'{current}\n{int(guesses)+1}\n')
 
@@ -400,7 +401,7 @@ tries\n{curr_user[:curr_user.find("#")]} guessed correctly
 @client.command(pass_context=True)
 async def me(message):
     channel = message.channel
-    await mySend(channel, message.author)
+    await my_send(channel, message.author)
 
 
 # @slash.slash(description='random swear word')
@@ -409,7 +410,7 @@ async def fuck(message):
     with open(folders_path+'/text/swear.txt', 'r') as file:
         words = [line for line in file]
 
-    await mySend(message, random.choice(words))
+    await my_send(message, random.choice(words))
 
 
 # @slash.slash(description='insults <discord_name>')
@@ -432,7 +433,7 @@ async def insult(message, *, ping):
 
     if ping.lower() == 'spaghett bot':
         with open(folders_path+"/text/insult_bot_message.txt") as f:
-            await mySend(message, f.read().replace("*name*", f"<@{name}>"))
+            await my_send(message, f.read().replace("*name*", f"<@{name}>"))
             return
 
     for i in 'nouns', 'adjectives', 'actions':
@@ -445,12 +446,12 @@ async def insult(message, *, ping):
                 actions = [line[:-1] for line in file]
 
     if not found:
-        await mySend(channel, 'No such member. Dumb fuck.')
+        await my_send(channel, 'No such member. Dumb fuck.')
     else:
         adj = random.choice(adjectives)
         noun = random.choice(nouns)
         act = random.choice(actions)
-        await mySend(channel, f"<@{name}> go {act}, you {adj} {noun}.")
+        await my_send(channel, f"<@{name}> go {act}, you {adj} {noun}.")
 
 
 # @slash.slash(description='4-20 A-s')
@@ -462,7 +463,7 @@ async def a(message):
     #     await mySend(message, 'no')
     #     return
     if random.randrange(50) == 22:
-        await mySend(message, f'****a.****\n{auth}')
+        await my_send(message, f'****a.****\n{auth}')
         return
     num = random.randint(4, 20)
     stats = {}
@@ -479,7 +480,7 @@ async def a(message):
     send += 'A' * num
     send += additional
 
-    await mySend(message, send)
+    await my_send(message, send)
 
     with open(folders_path+'/text/a_stats.txt', 'r') as f:
         for line in f:
@@ -490,7 +491,7 @@ async def a(message):
         for name, stat in stats.items():
             if name == curr_user[0]:
                 if name == "Averso#5633" and not int(stat[0]) % 10:
-                    await mySend(channel, random.choice(rnd))
+                    await my_send(channel, random.choice(rnd))
                 if curr_user[1]:
                     f.write(f'{name} {int(stat[0])+1} {int(stat[1])+1} {int(stat[2])+num}\n')
                 else:
@@ -517,9 +518,9 @@ async def staats(message, everyone=''):
             stats[spl[0]] = [spl[1], spl[2], spl[3]]
             if spl[0] == curr_user and not evr:
                 try:
-                    await mySend(channel, f"""{curr_user[:curr_user.find("#")]}: MAX - {round((int(spl[2])/int(spl[1])*100), 2)}% | AVG - {round(int(spl[3])/int(spl[1]), 2)} | {int(spl[1])}""")
+                    await my_send(channel, f"""{curr_user[:curr_user.find("#")]}: MAX - {round((int(spl[2])/int(spl[1])*100), 2)}% | AVG - {round(int(spl[3])/int(spl[1]), 2)} | {int(spl[1])}""")
                 except:
-                    await mySend(channel, 'imagine dividing by zero. yikes :feelsweird:')
+                    await my_send(channel, 'imagine dividing by zero. yikes :feelsweird:')
                 break
 
     if evr:
@@ -529,7 +530,7 @@ async def staats(message, everyone=''):
             if int(stat[1]) != 0 or int(stat[0]) != 0 or int(stat[2]) != 0:
                 out += f"""{short}: MAX - {round((int(stat[1]) / int(stat[0])*100), 2)}% | AVG - {round(int(stat[2])/int(stat[0]), 2)} | {int(stat[0])}\n"""
 
-        await mySend(message, out)
+        await my_send(message, out)
 
 
 # @slash.slash(description='sad')
@@ -538,13 +539,13 @@ async def badbot(message):
     channel = message.channel
     string = str(message.author)
     string = string[:string.find("#")]
-    await mySend(channel, f'{string} go commit die')
+    await my_send(channel, f'{string} go commit die')
 
 
 # @slash.slash(description='owo')
 @client.command(pass_context=True)
 async def goodbot(ctx):
-    await mySend(ctx, 'ty')
+    await my_send(ctx, 'ty')
 
 
 # @slash.slash(description='when u feel bad')
@@ -566,7 +567,7 @@ async def f(ctx):
                 f.write(f'{line}\n')
         f.write(f'{choice}\n')
 
-    await mySend(ctx, choice)
+    await my_send(ctx, choice)
 
 
 # @slash.slash(description='add something bad / sad / angry / depressing')
@@ -597,11 +598,11 @@ async def reddit(message, sub, text=None):
         for post in posts:
             try:
                 if post.selftext:
-                    await mySend(message, f'****Subreddit:**** r/{sub}\n****Title:**** {post.title}\n{post.ups}⇧ | {post.downs}⇩ \n\n{post.selftext}')
+                    await my_send(message, f'****Subreddit:**** r/{sub}\n****Title:**** {post.title}\n{post.ups}⇧ | {post.downs}⇩ \n\n{post.selftext}')
                     return
             except:
                 pass
-        await mySend(message, 'No post with selftext.')
+        await my_send(message, 'No post with selftext.')
         return
 
     for post in posts:
@@ -611,10 +612,10 @@ async def reddit(message, sub, text=None):
             urllib.request.urlretrieve(url, folders_path+'/send/reddit.png')
             break
         if post == posts[-1]:
-            await mySend(message, "*Couldn't find an image.*")
+            await my_send(message, "*Couldn't find an image.*")
             return
-    await mySend(message, f'****Subreddit****: r/{sub}')
-    await mySend(message.channel, discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
+    await my_send(message, f'****Subreddit****: r/{sub}')
+    await my_send(message.channel, discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
 
 
 # @slash.slash(description='random coomer subreddit')
@@ -623,7 +624,7 @@ async def coomer(message):
     channel = message.channel
 
     if str(message.author) not in users_allowed:
-        await mySend(message, """ye coming right up.... ooh im
+        await my_send(message, """ye coming right up.... ooh im
 sooorry, seems like your reddit karma is too low""")
         return 0
 
@@ -631,7 +632,7 @@ sooorry, seems like your reddit karma is too low""")
                            "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
                            "chiisaihentai"])
 
-    await mySend(channel, f'r/{chose}')
+    await my_send(channel, f'r/{chose}')
     await reddit(message, chose)
 
 
@@ -643,7 +644,7 @@ async def colour(ctx):
     img.save('colour.jpg')
     with open(folders_path+'/text/colours.txt', 'a') as f:
         f.write(f'{r} {g} {b} : ')
-    await mySend(ctx, discord.File("colour.jpg", "colour.jpg"))
+    await my_send(ctx, discord.File("colour.jpg", "colour.jpg"))
 
 
 # @slash.slash(description='names the last generated colour')
@@ -659,7 +660,7 @@ async def colourlist(ctx):
     with open(folders_path+'/text/colours.txt', 'r') as f:
         arr = [line[line.find(':')+2: -1] for line in f]
     send = ''.join(f'{prvok}\n' for prvok in arr)
-    await mySend(ctx, send)
+    await my_send(ctx, send)
 
 
 # @slash.slash(description='shows <name> colour')
@@ -671,7 +672,7 @@ async def showcolour(ctx, *, name):
                 r, g, b = line[:line.find(':')-1].split()
                 img = Image.new('RGB', (400, 400), (int(r), int(g), int(b)))
                 img.save(folders_path+'/send/colour.jpg')
-                await mySend(ctx, discord.File(folders_path+'/send/colour.jpg', folders_path+'/send/colour.jpg'))
+                await my_send(ctx, discord.File(folders_path+'/send/colour.jpg', folders_path+'/send/colour.jpg'))
                 break
 
 
@@ -683,7 +684,7 @@ async def video(ctx, *, video=''):
 
     if not video:
         vid_list = ''.join(f"{vid[:vid.find('.')]}, " for vid in videos)
-        await mySend(ctx, f'List of videos: {vid_list}')
+        await my_send(ctx, f'List of videos: {vid_list}')
         return
 
     found = False
@@ -692,30 +693,30 @@ async def video(ctx, *, video=''):
             found = True
             send = f'{folders_path}/send/videos/{vid}'
     if not found:
-        await mySend(ctx, 'No such video.')
+        await my_send(ctx, 'No such video.')
     else:
-        await mySend(ctx, discord.File(send, send))
+        await my_send(ctx, discord.File(send, send))
 
 
 # # @slash.slash(description='when a is not enough')
 @client.command(pass_context=True)
 async def AAA(ctx):
     send = folders_path+'/send/videos/AAA.mp4'
-    await mySend(ctx, discord.File(send, send))
+    await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='could i feel normal for one fucking moment please')
 @client.command(pass_context=True)
 async def EEE(ctx):
     send = folders_path+'/send/videos/EEE.mp4'
-    await mySend(ctx, discord.File(send, send))
+    await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='ptsd end of eva warning')
 @client.command(pass_context=True)
 async def AAAEEE(ctx):
     send = folders_path+'/send/videos/AAAEEE.mp4'
-    await mySend(ctx, discord.File(send, send))
+    await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='i love emilia')
@@ -723,27 +724,27 @@ async def AAAEEE(ctx):
 async def whOMEGALUL(ctx):
     i = random.randint(1, 4)
     send = f'{folders_path}/send/videos/who{i}.mp4'
-    await mySend(ctx, discord.File(send, send))
+    await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='plz audio <filename> (no extension)')
 @client.command(pass_context=True)
 async def audio(ctx, *filename):
-    await mySend(ctx, discord.File(f'{folders_path}/send/{" ".join(filename)}.mp3'))
+    await my_send(ctx, discord.File(f'{folders_path}/send/{" ".join(filename)}.mp3'))
 
 
 # @slash.slash(description="tumblin' down")
 @client.command(pass_context=True)
 async def deth(ctx):
     send = folders_path+'/send/tod.mp3'
-    await mySend(ctx, discord.File(send, send))
+    await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='re:zero spook sound')
 @client.command(pass_context=True)
 async def aeoo(ctx):
     send = folders_path+'/send/aeoo.mp3'
-    await mySend(ctx, discord.File(send, send))
+    await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='random meme')
@@ -758,7 +759,7 @@ async def meme(ctx):
 
     img.save(save)
     file = discord.File(save, filename=save)
-    await mySend(ctx, file)
+    await my_send(ctx, file)
 
 
 # @slash.slash(description='Cuts message into multiple lines.')
@@ -771,20 +772,20 @@ async def cut(ctx, *, message):
     else:
         for i in message.split():
             send += f'{i}\n'
-    await mySend(ctx, send)
+    await my_send(ctx, send)
 
 
 # @slash.slash(description='Argument is the name of the text file to be sent.')
 @client.command(pass_context=True)
 async def text(message, filename=''):
     if not filename:
-        await mySend(message, 'specify file name')
+        await my_send(message, 'specify file name')
     else:
         out = ''
         with open(f'{folders_path}/text/{filename}.txt', 'r') as f:
             for line in f:
                 out += line
-        await mySend(message, out)
+        await my_send(message, out)
 
 
 # @slash.slash(description='You can specify with argument, e.g. "temperature", "humidity", ..')
@@ -802,7 +803,7 @@ async def weather(ctx, *, specify=''):
         place = mgr.weather_at_place(info['location'])
     except Exception as error:
         print(error)
-        await mySend(ctx, 'Either calls per minute exceeded or API shat itself.')
+        await my_send(ctx, 'Either calls per minute exceeded or API shat itself.')
         return
     weather = place.weather
 
@@ -837,10 +838,10 @@ async def weather(ctx, *, specify=''):
         out = ''
         for send in ('location', 'temperature', 'humidity', 'status', 'wind', 'sunrise', 'sunset'):
             out += f'**{send.capitalize()}:** {info[send]}\n'
-        await mySend(ctx, out)
+        await my_send(ctx, out)
     elif specify:
         send = info[specify.lower()]
-        await mySend(ctx, f'''**{specify.capitalize()}:** {send}''')
+        await my_send(ctx, f'''**{specify.capitalize()}:** {send}''')
 
 
 # @slash.slash(description='When you need a sincere apology. Name of user as an argument.')
@@ -849,11 +850,11 @@ async def sorry(message, name=''):
     channel = message.channel
     curr_user = str(message.author)[:str(message.author).find("#")]
     if not name:
-        await mySend(channel, "u r sorry to whom? dumbass")
+        await my_send(channel, "u r sorry to whom? dumbass")
     elif name.lower() == 'spaghett bot':
-        await mySend(channel, 'ye no problem bro')
+        await my_send(channel, 'ye no problem bro')
     elif name.lower() == curr_user.lower():
-        await mySend(channel, "i'm sorry but the results came in - you're a narcissist")
+        await my_send(channel, "i'm sorry but the results came in - you're a narcissist")
     else:
         found = False
         for member in message.guild.members:
@@ -864,22 +865,22 @@ async def sorry(message, name=''):
                 found = True
                 break
         if not found:
-            await mySend(channel, """i'm sorry to user who doesn't exist.. 
+            await my_send(channel, """i'm sorry to user who doesn't exist.. 
 or mby it was someone's nickname, but i deleted that cuz of some bug i can't be bothered to fix :)""")
             return
         with open(folders_path+'/text/sry.txt', 'r') as f:
             send = f.readline()
-        await mySend(channel, f"<@{name_d}> {send}")
+        await my_send(channel, f"<@{name_d}> {send}")
 
 
 # @slash.slash(description='2000 random characters')
 @client.command(pass_context=True)
 async def asdlkj(message):
     if str(message.author)[:str(message.author).find('#')] != "Yelov":
-        await mySend(message, 'What is asdlkj. Wtf do u want from me. Stop typing random shit on your keyboard.')
+        await my_send(message, 'What is asdlkj. Wtf do u want from me. Stop typing random shit on your keyboard.')
         return
     send = "".join(chr(random.randint(33, 126)) for _ in range(2000))
-    await mySend(message, send)
+    await my_send(message, send)
 
 
 # @slash.slash(description='Magic 8-ball')
@@ -893,7 +894,7 @@ async def answer(message, *, question):
     no = ("wtf, no dude", "hell nawh", "0", "1", "the electricity pole or smth, the - one", "N. O.",
           "prolly no", "my dog says no", "most probably not if i do say so myself", "anta baka?!?!! zettai chigau!")
     answers = (yes, maybe, no)
-    await mySend(message, f"****{auth}:**** {question}\n****Answer:**** {random.choice(random.choice(answers))}")
+    await my_send(message, f"****{auth}:**** {question}\n****Answer:**** {random.choice(random.choice(answers))}")
 
 # @client.command(pass_context=True)
 
@@ -1007,7 +1008,7 @@ async def journal(message, word="", additional=""):
                 return f.read()
 
     if str(message.author)[:str(message.author).find("#")] != 'Yelov':
-        await mySend(message, "Ain't your journal bro")
+        await my_send(message, "Ain't your journal bro")
         return
 
     journal_text = ""
@@ -1036,10 +1037,10 @@ async def journal(message, word="", additional=""):
             journal_text += "Either input a word or set [additional] to 'random'/'allinfo'"
 
     if len(journal_text) > 2000:
-        for msg in splitLong(journal_text):
-            await mySend(message, msg)
+        for msg in split_long(journal_text):
+            await my_send(message, msg)
     else:
-        await mySend(message, journal_text)
+        await my_send(message, journal_text)
 
 
 # @slash.slash(description='Random message from Discord. Argument specifies the channel, default is "main"')
@@ -1058,22 +1059,22 @@ async def sadboyz(message, channel='main', user=''):
             else:
                 text += line
     if not user:
-        await mySend(message, random.choice(arr))
+        await my_send(message, random.choice(arr))
     else:
         out = arr.pop(random.randrange(len(arr)))
         while out.split()[0][2:-2] != user:
             out = arr.pop(random.randrange(len(arr)))
             if not len(arr):
-                await mySend(message, 'Prolly wrong username or smth')
+                await my_send(message, 'Prolly wrong username or smth')
                 return
-        await mySend(message, out)
+        await my_send(message, out)
 
 
 # @slash.slash(description="plz dict <word> <define/synonyms/antonyms>")
 @client.command(pass_context=True)
 async def dict(message, *, word_do=''):
     if len(word_do.split()) != 2:
-        await mySend(message, 'What word am I supposed to find dumbo')
+        await my_send(message, 'What word am I supposed to find dumbo')
         return
 
     word, do = word_do.split()
@@ -1092,13 +1093,13 @@ async def dict(message, *, word_do=''):
         else:
             words = dictionary.antonym(word)
         if not words:
-            await mySend(message, "Didn't find any words")
+            await my_send(message, "Didn't find any words")
             return
         output += f'**{do.capitalize()} of {word}:** '
         for word in words:
             output += f'{word}, '
         output = output[:-2]
-    await mySend(message, output)
+    await my_send(message, output)
 
 
 # @slash.slash(description="Random word from a dictionary")
@@ -1106,7 +1107,7 @@ async def dict(message, *, word_do=''):
 async def randomword(message):
     with open(folders_path+'/text/words_alpha.txt', 'r') as f:
         words = [line[:-1] for line in f]
-    await mySend(message, random.choice(words))
+    await my_send(message, random.choice(words))
 
 
 # @slash.slash(description="no")
@@ -1114,27 +1115,27 @@ async def randomword(message):
 async def no(message):
     out = ''
     out += '‎\n'*30
-    await mySend(message, out)
+    await my_send(message, out)
 
 
 # @slash.slash(description="Latency")
 @client.command(pass_context=True)
 async def ping(message):
-    await mySend(message, f'Pong! {round(client.latency,2)}s')
+    await my_send(message, f'Pong! {round(client.latency,2)}s')
 
 
 # @slash.slash(description="not kokot")
 @client.command(pass_context=True)
 async def send(ctx):
     send = folders_path+'/send/kokot.mp3'
-    await mySend(ctx, discord.File(send, send))
+    await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description="Join the current voice channel")
 @client.command(pass_context=True)
 async def joinvc(message):
     if not message.author.voice:
-        await mySend(message, "You aren't connected to a voice channel")
+        await my_send(message, "You aren't connected to a voice channel")
         return
     else:
         channel = message.author.voice.channel
@@ -1159,9 +1160,9 @@ async def play(message, *, url):
     def parse_search(url, volume=100):
         '''Parses search for YouTube, returns YouTube link'''
         def download(search):
-            customSearch = VideosSearch(search, limit=1)
-            link = customSearch.result()['result'][0]['link']
-            title = customSearch.result()['result'][0]['title']
+            custom_search = VideosSearch(search, limit=1)
+            link = custom_search.result()['result'][0]['link']
+            title = custom_search.result()['result'][0]['title']
             return (link, title)
 
         if url.split()[-1][:4] == 'vol=':
@@ -1246,7 +1247,7 @@ async def play(message, *, url):
     global song_queue
     voiceChannel = message.author.voice.channel
     if voiceChannel is None:
-        await mySend(message, "You ain't connected dawg")
+        await my_send(message, "You ain't connected dawg")
         return
     voice = discord.utils.get(client.voice_clients, guild=message.guild)
     if not voice:
@@ -1256,12 +1257,12 @@ async def play(message, *, url):
     if voice.is_playing() or voice.is_paused():
         title = parse_search(url)[1]
         song_queue.append(title)
-        await mySend(message, "Added to queue")
+        await my_send(message, "Added to queue")
         return
 
     link, title = play_url(url, voice)
 
-    await mySend(message, f"Playing **{title}**\n{link}\nCommands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave")
+    await my_send(message, f"Playing **{title}**\n{link}\nCommands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave")
 
 
 # @slash.slash(description="Plays an audio file in voice chat")
@@ -1281,7 +1282,7 @@ async def playfile(ctx, *, url):
         time.sleep(1)
 
     voice.play(discord.FFmpegPCMAudio(url))
-    await mySend(ctx, f"Playing {url}")
+    await my_send(ctx, f"Playing {url}")
 
 # # @slash.slash(description="Leaves the current voice channel")
 
@@ -1290,12 +1291,12 @@ async def playfile(ctx, *, url):
 async def leave(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     elif voice.is_connected():
         await voice.disconnect()
-        await mySend(ctx, "Disconnected")
+        await my_send(ctx, "Disconnected")
     else:
-        await mySend(ctx, "I'm not connected ya dingus")
+        await my_send(ctx, "I'm not connected ya dingus")
 
 
 # # @slash.slash(description="Pauses music")
@@ -1303,12 +1304,12 @@ async def leave(ctx):
 async def pause(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     elif voice.is_playing():
         voice.pause()
-        await mySend(ctx, "Paused")
+        await my_send(ctx, "Paused")
     else:
-        await mySend(ctx, "Not playin' anything")
+        await my_send(ctx, "Not playin' anything")
 
 
 # # @slash.slash(description="Resumes music")
@@ -1317,12 +1318,12 @@ async def resume(ctx):
     global current_song
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     elif voice.is_paused():
         voice.resume()
-        await mySend(ctx, f"Resumed - **{current_song}**")
+        await my_send(ctx, f"Resumed - **{current_song}**")
     else:
-        await mySend(ctx, "Shit's not paused yo")
+        await my_send(ctx, "Shit's not paused yo")
 
 # # @slash.slash(description="Skips song")
 @client.command(pass_context=True)
@@ -1330,14 +1331,14 @@ async def skip(ctx, num=1):
     global song_queue
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     elif len(song_queue) > 0:
         voice.stop()
         if num > 1:
             song_queue = song_queue[num-1:]
-        await mySend(ctx, f"Now playing **{song_queue[0]}**")
+        await my_send(ctx, f"Now playing **{song_queue[0]}**")
     else:
-        await mySend(ctx, "The queue is empty")
+        await my_send(ctx, "The queue is empty")
 
 # # @slash.slash(description="Prints song queue")
 
@@ -1346,12 +1347,12 @@ async def skip(ctx, num=1):
 async def queue(ctx):
     global song_queue
     if not len(song_queue):
-        await mySend(ctx, "The queue is empty")
+        await my_send(ctx, "The queue is empty")
         return
     res = ''.join(f'**{i+1}.** {song}\n' for i, song in enumerate(song_queue[:10]))
     if len(song_queue) > 10:
         res += f"**.. and {len(song_queue)-10} other songs**"
-    await mySend(ctx, "**Current queue:**\n" + res)
+    await my_send(ctx, "**Current queue:**\n" + res)
 
 # # @slash.slash(description="Clears song queue")
 
@@ -1360,7 +1361,7 @@ async def queue(ctx):
 async def clearqueue(ctx):
     global song_queue
     song_queue = []
-    await mySend(ctx, "Song queue cleared")
+    await my_send(ctx, "Song queue cleared")
 
 # # @slash.slash(description="Stops music")
 
@@ -1370,13 +1371,13 @@ async def stop(ctx):
     global song_queue
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     elif voice.is_playing():
         voice.stop()
         song_queue = []
-        await mySend(ctx, "Stopped")
+        await my_send(ctx, "Stopped")
     else:
-        await mySend(ctx, "Music isn't playing")
+        await my_send(ctx, "Music isn't playing")
 
 # # @slash.slash(description="Changes volume (broken)")
 
@@ -1385,7 +1386,7 @@ async def stop(ctx):
 async def volume(ctx, *, volume):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     elif 0 <= int(volume) <= 100:
         voice.source.volume = float(volume) / 100
 
@@ -1396,16 +1397,16 @@ async def volume(ctx, *, volume):
 async def currentvolume(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     else:
-        await mySend(ctx, f"Current volume: {voice.source.volume*100}%")
+        await my_send(ctx, f"Current volume: {voice.source.volume*100}%")
 
 
 @client.command(pass_context=True)
 async def maximumpain(ctx):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
-        await mySend(ctx, "Not connected")
+        await my_send(ctx, "Not connected")
     else:
         voice.source.volume = float(1000000) / 100
 
@@ -1426,7 +1427,7 @@ async def maths(ctx, *, action):
         orig = num
 
     if action == '=':
-        await mySend(ctx, f'The number is **{num}**')
+        await my_send(ctx, f'The number is **{num}**')
         return
     if action == 'explain':
         send = 'Modify the current number. Type "=" to show the current number.\n'
@@ -1439,11 +1440,11 @@ async def maths(ctx, *, action):
         send += '- **round** <decimals>\n'
         send += '- any function from the Python *math* module, for example *maths pow 2* or *maths factorial*\n'
         send += 'Starting number was 1.0'
-        await mySend(ctx, send)
+        await my_send(ctx, send)
         return
     if action == 'math commands':
         commands = [i for i in dir(math) if i[0:2] != '__']
-        await mySend(ctx, commands)
+        await my_send(ctx, commands)
         return
 
     args = len(action.split())
@@ -1453,10 +1454,10 @@ async def maths(ctx, *, action):
         try:
             b = Decimal(b)
         except:
-            await mySend(ctx, f'{b} is not a valid number')
+            await my_send(ctx, f'{b} is not a valid number')
             return
     elif args > 2:
-        await mySend(ctx, 'Wrong number of arguments')
+        await my_send(ctx, 'Wrong number of arguments')
         return
 
     if a == '+':
@@ -1491,7 +1492,7 @@ async def maths(ctx, *, action):
                 num = func(int(num), b)
         num = change_num(num)
 
-    await mySend(ctx, f'{orig} → {num}')
+    await my_send(ctx, f'{orig} → {num}')
 
 
 @client.command(pass_context=True)
@@ -1506,7 +1507,7 @@ async def execute(ctx, *, code=''):
         sys.stdout = old
 
     if len(code.split('```')) != 3:
-        await mySend(ctx, "Write your code like this:\n> plz execute\n> \```\n> print('test')\n> \```")
+        await my_send(ctx, "Write your code like this:\n> plz execute\n> \```\n> print('test')\n> \```")
         return
     code = code.split('```')[1]
 
@@ -1514,19 +1515,19 @@ async def execute(ctx, *, code=''):
         try:
             exec(code)
             if not s.getvalue():
-                await mySend(ctx, "Didn't print anything")
+                await my_send(ctx, "Didn't print anything")
             else:
-                await mySend(ctx, s.getvalue())
+                await my_send(ctx, s.getvalue())
         except:
-            await mySend(ctx, "Invalid code")
+            await my_send(ctx, "Invalid code")
 
 
 @client.command(pass_context=True)
 async def evaluate(ctx, *, code):
     try:
-        await mySend(ctx, eval(code))
+        await my_send(ctx, eval(code))
     except:
-        await mySend(ctx, "Invalid code")
+        await my_send(ctx, "Invalid code")
 
 
 async def ai(engine, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop=None):
@@ -1546,7 +1547,7 @@ async def ai(engine, prompt, temperature, max_tokens, top_p, frequency_penalty, 
 
 @client.command(pass_context=True)
 async def aigenerate(ctx, *, prompt):
-    await mySend(ctx, "brb, generating...")
+    await my_send(ctx, "brb, generating...")
     output = await ai(
         "davinci",
         prompt,
@@ -1561,10 +1562,10 @@ async def aigenerate(ctx, *, prompt):
             new_output += line
     output = new_output
     if len(output) > 2000:
-        for msg in splitLong(output):
-            await mySend(ctx, msg)
+        for msg in split_long(output):
+            await my_send(ctx, msg)
     else:
-        await mySend(ctx, output)
+        await my_send(ctx, output)
 
 
 @client.command(pass_context=True)
@@ -1575,7 +1576,7 @@ async def aianswer(ctx, *, prompt):
         "davinci-instruct-beta",
         f"Q: Who is Batman?\nA: Batman is a fictional comic book character.\n###\nQ: What is torsalplexity?\nA: ?\n###\nQ: What is Devz9?\nA: ?\n###\nQ: Who is George Lucas?\nA: George Lucas is American film director and producer famous for creating Star Wars.\n###\nQ: What is the capital of California?\nA: Sacramento.\n###\nQ: What orbits the Earth?\nA: The Moon.\n###\nQ: Who is Fred Rickerson?\nA: ?\n###\nQ: What is an atom?\nA: An atom is a tiny particle that makes up everything.\n###\nQ: Who is Alvan Muntz?\nA: ?\n###\nQ: What is Kozar-09?\nA: ?\n###\nQ: How many moons does Mars have?\nA: Two, Phobos and Deimos.\n###\nQ: {prompt}\nA:",
         0.0, 60, 1, 0, 0, "###")
-    await mySend(ctx, f'**A:** {output}')
+    await my_send(ctx, f'**A:** {output}')
 
 
 @client.command(pass_context=True)
@@ -1584,7 +1585,7 @@ async def aiad(ctx, *, prompt):
         "davinci-instruct-beta",
         f"Write a creative ad for the following product:\n\"\"\"\"\"\"\n{prompt}\n\"\"\"\"\"\"\nThis is the ad I wrote aimed at teenage girls:\n\"\"\"\"\"\"",
         0.5, 90, 1, 0, 0, "\"\"\"\"\"\"")
-    await mySend(ctx, f'{output}')
+    await my_send(ctx, f'{output}')
 
 
 @client.command(pass_context=True)
@@ -1593,7 +1594,7 @@ async def aianalogy(ctx, *, prompt):
         "davinci-instruct-beta",
         f"Ideas are like balloons in that: they need effort to realize their potential.\n\n{prompt} in that:",
         0.5, 60, 1.0, 0.0, 0.0, "\n")
-    await mySend(ctx, f'{prompt} in that{output}')
+    await my_send(ctx, f'{prompt} in that{output}')
 
 
 @client.command(pass_context=True)
@@ -1602,7 +1603,7 @@ async def aiengrish(ctx, *, prompt):
         "davinci-instruct-beta",
         f"Original: {prompt}\nStandard American English:",
         0, 60, 1.0, 0.0, 0.0, "\n")
-    await mySend(ctx, output)
+    await my_send(ctx, output)
 
 
 @client.command(pass_context=True)
@@ -1611,13 +1612,13 @@ async def aicode(ctx, *, prompt):
         "davinci-codex",
         prompt,
         0, 64, 1.0, 0.0, 0.0, "#")
-    await mySend(ctx, output)
+    await my_send(ctx, output)
 
 
 @client.command(pass_context=True)
 async def findword(ctx, where, part):
     if where not in ("begins", "ends"):
-        await mySend(ctx, "Need to specify with begins/ends")
+        await my_send(ctx, "Need to specify with begins/ends")
         return
     output = []
     with open(folders_path+"/text/words_alpha.txt", 'r') as f:
@@ -1630,15 +1631,15 @@ async def findword(ctx, where, part):
                 if line[len(line)-len(part):] == part:
                     output.append(line)
     if not len(output):
-        await mySend(ctx, "Didn't find any word")
+        await my_send(ctx, "Didn't find any word")
     else:
-        await mySend(ctx, random.choice(output))
+        await my_send(ctx, random.choice(output))
 
 
 @client.command(pass_context=True)
 async def showfunction(ctx, function):
     if function == "showfunction":
-        await mySend(ctx, """I swear it worked, but then I refactored the code so that it's shorter but now it doesn't work
+        await my_send(ctx, """I swear it worked, but then I refactored the code so that it's shorter but now it doesn't work
 but it's worth the 5 lines saved. Actually now that I look at it it's even uglier. Maybe that's why it's
 not working, so that you wouldn't be able to see this ugly ass disgusting spaghett. Or maybe it's the prettiest
 code you've ever seen. Who knows. You'll never know. You'll never see the code of this function. Ever.""")
@@ -1648,36 +1649,51 @@ code you've ever seen. Who knows. You'll never know. You'll never see the code o
         content = f.read()
     ix = content.find(f"async def {function}")
     if ix == -1:
-        await mySend(ctx, "Function not found")
+        await my_send(ctx, "Function not found")
         return
     out += content[ix:]
     ix = min(out.find("@client"), out.find("@slash"))
     out = out[:ix]+"\n```"
     if len(out) > 2000:
-        for msg in splitLong(out):
-            await mySend(ctx, msg)
+        for msg in split_long(out):
+            await my_send(ctx, msg)
     else:
-        await mySend(ctx, out)
+        await my_send(ctx, out)
 
 @client.command(pass_context=True)  # just testing wait_for()
 async def epicshit(ctx):
-    await mySend(ctx, "Is this shit epic? [yes/no]")
+    await my_send(ctx, "Is this shit epic? [yes/no]")
     msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
     if msg.content == "yes":
-        await mySend(ctx, "Fuck yea, bitch.\nYou want [kokot] or [pica]?")
+        await my_send(ctx, "Fuck yea, bitch.\nYou want [kokot] or [pica]?")
         msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
         if msg.content == "kokot":
             file = discord.File(folders_path+"/imgs/kokot.jpg", filename=folders_path+"/imgs/kokot.jpg")
-            await mySend(ctx, file)
+            await my_send(ctx, file)
         elif msg.content == "pica":
             file = discord.File(folders_path+"/imgs/pica.jpg", filename=folders_path+"/imgs/pica.jpg")
-            await mySend(ctx, file)
+            await my_send(ctx, file)
     elif msg.content == "no":
-        await mySend(ctx, "You want a slap? [yes/yes]")
+        await my_send(ctx, "You want a slap? [yes/yes]")
         msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
         if msg.content == "yes":
-            await mySend(ctx, "u kinky mofo ;)")
+            await my_send(ctx, "u kinky mofo ;)")
         else:
-            await mySend(ctx, f"there was no '{msg.content}' option you moron, get slapped *slaps*")
+            await my_send(ctx, f"there was no '{msg.content}' option you moron, get slapped *slaps*")
     else:
-        await mySend(ctx, "you stupid fuck, that's not [yes/no]")
+        await my_send(ctx, "you stupid fuck, that's not [yes/no]")
+
+@client.command(pass_context=True)
+async def gptj(ctx, *, input_text):
+    key = keys["tensorbox"]
+    tb.Client.set_api_key(key)
+    mssg = await ctx.send("generating, gimme a sec..")
+    # temperature=1 and top_k=50 is default
+    result = tb.Client.generate({"model":"iron",
+        "text": input_text,
+        "max_length": 2,
+        "min_length": 1,
+        "temperature": 1,
+        "top_k": 50})
+    await mssg.delete()
+    await my_send(ctx, input_text + result["output"])
