@@ -1683,16 +1683,22 @@ async def epicshit(ctx):
         await my_send(ctx, "you stupid fuck, that's not [yes/no]")
 
 @client.command(pass_context=True)
-async def gptj(ctx, *, input_text):
+async def gptj(ctx, *, input_text): # XD ran out of credits
     key = keys["tensorbox"]
     tb.Client.set_api_key(key)
     mssg = await ctx.send("generating, gimme a sec..")
-    # temperature=1 and top_k=50 is default
-    result = tb.Client.generate({"model":"iron",
-        "text": input_text,
-        "max_length": 2,
-        "min_length": 1,
-        "temperature": 1,
-        "top_k": 50})
+    # temperature=<0,10> -> randomness
+    # top_k=<1,100> -> filtering amount, lower if going off-topic
+    # top_p=<0.05,1.0> -> filtering threshold, lower if going off-topic
+    try:
+        result = tb.Client.generate({
+            "model":"iron",
+            "text": input_text,
+            "max_length": 2,
+            "min_length": 1
+        })
+    except:
+        await my_send(ctx, "Ran out of credits uwu")
+        return
     await mssg.delete()
     await my_send(ctx, input_text + result["output"])
