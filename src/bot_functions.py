@@ -38,8 +38,7 @@ current_song = ''
 keys = {}
 with open("ClientKey.txt") as f:
     for line in f:
-        line = line[:-1]
-        key, val = line.split()
+        key, val = line.strip().split()
         keys[key] = val
 
 
