@@ -10,6 +10,7 @@ import time
 import requests
 import urllib.request
 import tensorboxsdk as tb
+import json
 from datetime import timezone
 from decimal import Decimal
 from io import StringIO
@@ -1684,25 +1685,16 @@ async def epicshit(ctx):
         await my_send(ctx, "you stupid fuck, that's not [yes/no]")
 
 @client.command(pass_context=True)
-async def gptj(ctx, *, input_text): # XD ran out of credits
-    key = keys["tensorbox"]
-    tb.Client.set_api_key(key)
-    mssg = await ctx.send("generating, gimme a sec..")
-    # temperature=<0,10> -> randomness
-    # top_k=<1,100> -> filtering amount, lower if going off-topic
-    # top_p=<0.05,1.0> -> filtering threshold, lower if going off-topic
-    try:
-        result = tb.Client.generate({
-            "model":"iron",
-            "text": input_text,
-            "max_length": 2,
-            "min_length": 1
-        })
-    except:
-        await my_send(ctx, "Ran out of credits uwu")
-        return
-    await mssg.delete()
-    await my_send(ctx, input_text + result["output"])
+async def gptj(ctx, *, input_text):
+    headers = {"Authorization": f"Bearer {keys['huggingface']}"}
+    API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6B"
+    payload = {
+        "inputs": input_text,
+        "parameters": {"temperature": 0.75, "top_p": 1.0, "max_length": 100},
+    }
+    data = json.dumps(payload)
+    response = requests.post(API_URL, headers=headers, data=data).json()
+    await my_send(ctx, response[0]["generated_text"])
 
 @client.command(pass_context=True)
 async def j1(ctx, *, input_text):
