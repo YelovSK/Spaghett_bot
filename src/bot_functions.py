@@ -11,12 +11,15 @@ import requests
 import urllib.request
 import tensorboxsdk as tb
 import json
+import soundfile as sf
+
 from datetime import timezone
 from decimal import Decimal
 from io import StringIO
 from os import listdir
 from os.path import getsize, isfile, join
 from pathlib import Path
+from espnet2.bin.tts_inference import Text2Speech
 
 import discord
 import openai
@@ -34,9 +37,10 @@ from help import *
 stop = False
 folders_path = os.path.relpath("folders")
 remindrun = False
-users_allowed = ("Yelov#5021", "Averso#5633", "jozko#1351", "AltheaZ0rg#8216")
+users_allowed = [line.strip() for line in open("folders\\text\\users_allowed.txt").readlines()]
 song_queue = []
 current_song = ''
+text2speech_model = None
 keys = {}
 with open("ClientKey.txt") as f:
     for line in f:
@@ -1685,15 +1689,27 @@ async def epicshit(ctx):
         await my_send(ctx, "you stupid fuck, that's not [yes/no]")
 
 @client.command(pass_context=True)
-async def gptj(ctx, *, input_text):
+async def huggingface(ctx, *, input_text):
+    if not input_text:
+        await my_send(ctx, "Write 'models' for a list of models\nWrite 'model=<model_name> <input_text>'\nOr just '<input_text>'")
+        return
+    if input_text == "models":
+        await my_send(ctx, "Generatoin:\n1. EleutherAI/gpt-j-6\n2. EleutherAI/gpt-neo-2.7B\n3. microsoft/DialoGPT-large")
+        await my_send(ctx, "Conversation:\n1. microsoft/DialoGPT-large\n2. facebook/blenderbot-3B")
+    model = "EleutherAI/gpt-j-6B"
+    if input_text[:len("model=")] == "model=":
+        model = input_text.split()[0].split("=")[1]
+    mssg = await ctx.send("generating, gimme a sec..")
     headers = {"Authorization": f"Bearer {keys['huggingface']}"}
-    API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6B"
+    API_URL = f"https://api-inference.huggingface.co/models/{model}"
     payload = {
         "inputs": input_text,
-        "parameters": {"temperature": 0.75, "top_p": 1.0, "max_length": 100},
+        "parameters": {"temperature": 0.5, "max_length": 100, "repetition_penalty": 10.0},
+        "options": {"use_cache": False}
     }
     data = json.dumps(payload)
     response = requests.post(API_URL, headers=headers, data=data).json()
+    await mssg.delete()
     await my_send(ctx, response[0]["generated_text"])
 
 @client.command(pass_context=True)
@@ -1715,3 +1731,18 @@ async def j1(ctx, *, input_text):
     data = res.json()
     output = data['completions'][0]['data']['text']
     await my_send(ctx, input_text + output)
+
+@client.command(pass_context=True)
+async def text2speech(ctx, *, input_text):
+    global text2speech_model
+
+    messages = []
+    if not text2speech_model:
+        messages.append(await ctx.send("Loading model..."))
+        text2speech_model = Text2Speech.from_pretrained("espnet/kan-bayashi_ljspeech_joint_finetune_conformer_fastspeech2_hifigan")
+    messages.append(await ctx.send("Generating audio..."))
+    wav = text2speech_model(input_text)["wav"]
+    for mssg in messages:
+        await mssg.delete()
+    sf.write(f'{folders_path}/send/text2speech.wav', wav.numpy(), text2speech_model.fs, "PCM_16")
+    await my_send(ctx, discord.File(f'{folders_path}/send/text2speech.wav'))
