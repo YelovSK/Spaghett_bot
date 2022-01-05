@@ -1,3 +1,5 @@
+import openai
+import praw
 import asyncio
 import contextlib
 import math
@@ -9,38 +11,33 @@ import sys
 import time
 import requests
 import urllib.request
-import tensorboxsdk as tb
 import json
 import soundfile as sf
 
+from os.path import join as pjoin
 from datetime import timezone
 from decimal import Decimal
 from io import StringIO
-from os import listdir
-from os.path import getsize, isfile, join
 from pathlib import Path
 from espnet2.bin.tts_inference import Text2Speech
-
-import discord
-import openai
-import praw
 from PIL import Image, ImageDraw, ImageFont
 from PyDictionary import PyDictionary
 from pyowm.owm import OWM
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials
-from youtube_dl import YoutubeDL
+from yt_dlp import YoutubeDL
 from youtubesearchpython import Video, VideosSearch
+from collections import Counter
 
 from help import *
 
 stop = False
-folders_path = os.path.relpath("folders")
 remindrun = False
-users_allowed = [line.strip() for line in open("folders\\text\\users_allowed.txt").readlines()]
+users_allowed = open(pjoin("folders", "text", "users_allowed.txt")).read().splitlines()
 song_queue = []
 current_song = ''
 text2speech_model = None
+curr_colour = None
 keys = {}
 with open("ClientKey.txt") as f:
     for line in f:
@@ -50,7 +47,7 @@ with open("ClientKey.txt") as f:
 
 def split_long(text):    # todo formatting breaks if split at **word
     mssgs = []
-    for _ in range((len(text)//2000) + 1):
+    for _ in range((len(text) // 2000) + 1):
         mssgs.append(text[:2000])
         text = text[2000:]
     if text:
@@ -60,10 +57,14 @@ def split_long(text):    # todo formatting breaks if split at **word
 async def my_send(context, mssg):
     if type(mssg) == discord.File:
         sent_mssg = await context.send(file = mssg)
+    elif len(mssg) > 2000:
+        for m in split_long(mssg):
+            await my_send(context, m)
+        return
     else:
         sent_mssg = await context.send(mssg)
     mssg_id, channel_id = sent_mssg.id, sent_mssg.channel.id
-    with open(folders_path+"//text//prev_mssg_ids.txt", "a") as f:
+    with open(pjoin("folders", "text", "prev_mssg_ids.txt"), "a") as f:
         f.write(f'{channel_id} {mssg_id}\n')
 
 # @slash.slash(description='example: 1 hour 5 minutes <message> /repeat/')
@@ -110,7 +111,6 @@ async def remind(ctx, *, string):
 # @slash.slash(description='is timer active?')
 @client.command(pass_context=True)
 async def remind_active(ctx):
-    global remindrun
     if remindrun:
         await my_send(ctx, 'Ye')
     else:
@@ -130,7 +130,7 @@ async def remind_stop(ctx):
 async def number(ctx, *, num):
     good = []
     bad = []
-    with open(folders_path+"/text/num_answers.txt") as f:
+    with open(pjoin("folders", "text", "num_answers.txt")) as f:
         adding_good = True
         for line in f:
             line = line[:-1]
@@ -141,16 +141,14 @@ async def number(ctx, *, num):
                     good.append(line)
                 else:
                     bad.append(line)
-    try:
-        numint = int(num)
-        cis = random.randint(1, 100)
-        if numint == cis:
-            await my_send(ctx, f'Guessed {num}\n{random.choice(good)}')
-        else:
-            await my_send(ctx, f'Guessed {num}\n{random.choice(bad)}')
-            print(f'Guessed {num}, was {cis}')
-    except:
+    if not num.isnumeric():
         await my_send(ctx, f'Ah yes, {num} - the perfect "num". Moron.')
+        return
+    num_int = int(num)
+    cis = random.randint(1, 100)
+    ans = random.choice(good) if num_int == cis else random.choice(bad)
+    await my_send(ctx, f'Guessed {num}\n{ans}')
+    print(f'Guessed {num}, was {cis}')
 
 
 # @slash.slash(description='"list" / "add "word" / "define" <word : definition>')
@@ -162,22 +160,22 @@ async def word(ctx, do='', *, word=''):
         word.strip()
         definition.strip()
 
+    dictionary_path = pjoin("folders", "text", "dictionary.txt")
     if not do:
         await my_send(ctx, '"list" / "define <word>" / "add <word : definition>"')
-
     elif do in 'add':
-        with open(folders_path+'/text/dictionary.txt', 'r') as file:
+        with open(dictionary_path, 'r') as file:
             for line in file:
                 index = line.find(':')
                 dick[line[:index-1]] = line[index+2:]
 
         if word not in dick.keys():
-            with open(folders_path+'/text/dictionary.txt', 'a') as file:
+            with open(dictionary_path, 'a') as file:
                 file.write(f'{word}:{definition}\n')
                 print(f'Added {word}')
 
     elif do == 'define':
-        with open(folders_path+'/text/dictionary.txt', 'r') as file:
+        with open(dictionary_path, 'r') as file:
             for line in file:
                 index = line.find(':')
                 if line[:index-1] == word:
@@ -186,7 +184,7 @@ async def word(ctx, do='', *, word=''):
     elif do == 'list':
         send = ''
 
-        with open(folders_path+'/text/dictionary.txt', 'r') as file:
+        with open(dictionary_path, 'r') as file:
             for line in file:
                 index = line.find(':')
                 send += f'{line[:index-1]}\n'
@@ -197,39 +195,36 @@ async def word(ctx, do='', *, word=''):
 @client.command(pass_context=True)
 async def image(ctx, img_name='', *, text=''):
     if not img_name:
+        path = pjoin("folders", "imgs")
+        files = [f[:-4] for f in os.listdir(path) if os.path.isfile(pjoin(path, f))]
+        send = "\n".join(files)
         await my_send(ctx, 'Send with <image_name> <text>')
-        send, path = "", f"{folders_path}/imgs"
-        files = [f[:-4] for f in listdir(path) if isfile(join(path, f))]
-
-        for file in files:
-            send += f'{file}\n'
         await my_send(ctx, f'Image list:\n{send}')
         return
 
     basewidth = 1200
-    split = [img_name, text]
-    num = split[0]
-    try:
-        img = Image.open(f'{folders_path}/imgs/{num}.png')
-    except:
-        img = Image.open(f'{folders_path}/imgs/{num}.jpg')
+    for ext in (".png", ".jpg", ".bmp", ".jpeg"):
+        curr_path = pjoin("folders", "imgs", img_name + ext)
+        if os.path.exists(curr_path):
+            img = Image.open(curr_path)
+            break
 
-    wpercent = (basewidth/float(img.size[0]))
-    hsize = int((float(img.size[1])*float(wpercent)))
+    wpercent = (basewidth / float(img.size[0]))
+    hsize = int((float(img.size[1]) * float(wpercent)))
     img = img.resize((basewidth, hsize), Image.ANTIALIAS)
     draw = ImageDraw.Draw(img)
 
-    message = ''.join(f'{i} ' for i in split[1:])
+    message = ' '.join(list(text))
 
-    charCount = len(message)
+    char_count = len(message)
     for offset, col in ((230, "black"), (200, "white")):
-        font = ImageFont.truetype("font.ttf", int((basewidth+offset)/((charCount/2)+4)))
-        fontsize = int((basewidth+offset)/((charCount/2)+3))
+        font = ImageFont.truetype("font.ttf", int((basewidth + offset) / ((char_count / 2) + 4)))
+        fontsize = int((basewidth + offset) / ((char_count / 2) + 3))
         w, _ = draw.textsize(message, font=font)
-        draw.text(((img.width-w)/2, img.height-(fontsize/1.2)-30), message, font=font, fill=col)
-    img.save(folders_path+'/send/meme.png')
+        draw.text(((img.width-w) / 2, img.height - (fontsize / 1.2) - 30), message, font=font, fill=col)
+    img.save(pjoin("folders", "send", "meme.png"))
 
-    file = discord.File(folders_path+"/send/meme.png", filename=folders_path+"/send/meme.png")
+    file = discord.File(pjoin("folders", "send", "meme.png"), filename=pjoin("folders", "send", "meme.png"))
     await my_send(ctx, file)
 
 
@@ -237,42 +232,27 @@ async def image(ctx, img_name='', *, text=''):
 @client.command(pass_context=True)
 async def fap(message, *, folder=''):
     if not folder:
-        with open(folders_path+"/text/fap.txt", 'r') as f:
-            folders = [line[:-1] for line in f]
+        folders = open(pjoin("folders", "text", "fap.txt")).read().splitlines()
         folder = random.choice(folders)
 
-    path = f"F:\Desktop start menu\homework\{folder}"
-    files = [f for f in listdir(path) if isfile(join(path, f))]
-    choice = random.choice(files)
-    final_path = f'{path}\{choice}'
-    size = round(getsize(final_path) / 1048576, 2)
-    while size > 8:
-        size = round(getsize(final_path) / 1048576, 2)
-        await my_send(message, f'{choice} is too large ({size} MB)')
-        choice = random.choice(files)
-        final_path = f'{path}\{choice}'
-    img = Image.open(final_path)
-
-    save = folders_path+'/send/homework.png'
-
-    img.save(save)
-    file = discord.File(save, filename=save)
+    path = pjoin("F:\\Desktop start menu", "homework", folder)
+    files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f)) if os.path.getsize(pjoin(path, f)) < 8_000_000]
+    file_path = pjoin("folders", "send", "homework.png")
+    Image.open(pjoin(path, random.choice(files))).save(file_path)
+    file = discord.File(file_path, filename=file_path)
     await my_send(message.channel, f'****Folder:**** {folder}')
     try:
         await my_send(message, file)
     except Exception as error:
         await my_send(message, 'oopsie, failed to upload, error kodiQ: ' + str(error))
-        await my_send(message, f'{choice} is (prolly?) too large ({size} MB)')
 
 
 # # @slash.slash(description='[plz delete <msg_num>] no argument deletes all messages')
 @client.command(pass_context=True)
 async def delete(message, num=1):
     prev_messages = []
-    with open(folders_path+"//text//prev_mssg_ids.txt") as f:
-        for line in f.read().split('\n'):
-            if line == "":
-                break
+    with open(pjoin("folders", "text", "prev_mssg_ids.txt")) as f:
+        for line in f.read().splitlines():
             channel_id, mssg_id = line.split()
             try:
                 channel = client.get_channel(int(channel_id))
@@ -280,8 +260,11 @@ async def delete(message, num=1):
                 prev_messages.append(orig_mssg)
             except:
                 print(f"Message with ID {mssg_id} was prolly already deleted")
-
-    with open(folders_path+"//text//prev_mssg_ids.txt", "w") as f:  # to clear broken messages
+    if not prev_messages:
+        await message.send("No message history")
+        return
+    prev_messages = prev_messages[-20:]
+    with open(pjoin("folders", "text", "prev_mssg_ids.txt"), "w") as f:  # to clear broken messages
         for mssg in prev_messages:
             f.write(f'{mssg.channel.id} {mssg.id}\n')
 
@@ -292,12 +275,14 @@ async def delete(message, num=1):
             return
         num = len(prev_messages)
 
-    await message.send(f"Deleting {num} messages")
+    msg = await message.send(f"Deleting {num} messages")
     for _ in range(num):
         await prev_messages.pop().delete()
-    with open(folders_path+"//text//prev_mssg_ids.txt", "w") as f:
-        for mssg in prev_messages:
-            f.write(f'{mssg.channel.id} {mssg.id}\n')
+        if not prev_messages:
+            break
+    with open(pjoin("folders", "text", "prev_mssg_ids.txt"), "w") as f:
+        f.write("\n".join([f"{mssg.channel.id} {mssg.id}" for mssg in prev_messages]))
+    await msg.delete()
 
 
 # @slash.slash(description='(mostly) sfw')
@@ -314,35 +299,25 @@ async def kawaii(message, do='', image=None):
     if do == 'cum':
         channel = client.get_channel(680494725165219958)
 
-    path = folders_path+"/send/kawaii"
     if do and do != 'cum':
-        file = discord.File(f'{folders_path}/send/kawaii/{do}',
-                            filename=f'{folders_path}/send/kawaii/{do}')
+        file = discord.File(pjoin("folders", "send", "kawaii", do),
+                            filename=pjoin("folders", "send", "kawaii", do))
         await my_send(channel, file)
         return
 
-    with open(folders_path+'/text/pseudorandom_kawaii.txt', 'r') as f:
-        order = []
-        for line in f:
-            if line.find('\n') == -1:
-                order.append(line)
-            else:
-                order.append(line[:line.find('\n')])
-
-    files = [f for f in listdir(path) if isfile(join(path, f))]
+    order = open(pjoin("folders", "text", "pseudorandom_kawaii.txt")).readlines()
+    path = pjoin("folders", "send", "kawaii")
+    files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f))]
     choice = random.choice(files[5:])
 
-    with open(folders_path+'/text/pseudorandom_kawaii.txt', 'w') as f:
+    with open(pjoin("folders", "text", "pseudorandom_kawaii.txt"), 'w') as f:
         o = order[1:] if len(order) == len(files) else order
         for img in o:
-            f.write(f'{img}\n')
+            f.write(img)
         f.write(f'{choice}\n')
 
-    img = Image.open(f'{path}\{choice}')
-
-    save = folders_path+'/send/kawaii.png'
-
-    img.save(save)
+    save = pjoin("folders", "send", "kawaii.png")
+    Image.open(pjoin(path, choice)).save(save)
     file = discord.File(save, filename=save)
     try:
         await my_send(channel, file)
@@ -361,8 +336,7 @@ async def guess(message, *, num):
     change = False
     current, guesses = None, None
     users = {}
-
-    with open(folders_path+'/text/guess_stats.txt') as f:
+    with open(pjoin("folders", "text", "guess_stats.txt")) as f:
         for line in f:
             split = line.split()
             if len(split) <= 2:
@@ -370,12 +344,13 @@ async def guess(message, *, num):
 
     curr_user = str(message.author)
 
-    with open(folders_path+'/text/guess.txt') as file:
+    with open(pjoin("folders", "text", "guess.txt")) as file:
         for i, line in enumerate(file):
+            line = line.strip()
             if i == 0:
-                current = line[:-1]
+                current = line
             elif i == 1:
-                guesses = line[:-1]
+                guesses = line
 
     if int(current) == int(num):
         await my_send(channel, f'''Guessed in {int(guesses)+1}
@@ -384,22 +359,21 @@ tries\n{curr_user[:curr_user.find("#")]} guessed correctly
         change = True
 
     if change:
-        cis = random.randrange(10000)
-        with open(folders_path+'/text/guess.txt', 'w') as file:
-            file.write(f'{cis}\n0\n')
-        with open(folders_path+'/text/guess_stats.txt', 'w') as file:
+        with open(pjoin("folders", "text", "guess.txt"), 'w') as file:
+            file.write(str(random.randrange(10_000)) + "\n" + "0")
+        with open(pjoin("folders", "text", "guess_stats.txt"), 'w') as file:
             for name, points in users.items():
                 if name == curr_user:
-                    file.write(f'{name} {points+1}\n')
-                else:
-                    file.write(f'{name} {points}\n')
+                    points += 1
+                file.write(f'{name} {points}\n')
+        return
+
+    if int(num) < int(current):
+        await my_send(channel, 'Higher')
     else:
-        if int(num) < int(current):
-            await my_send(channel, 'Higher')
-        else:
-            await my_send(channel, 'Lower')
-        with open(folders_path+'/text/guess.txt', 'w') as file:
-            file.write(f'{current}\n{int(guesses)+1}\n')
+        await my_send(channel, 'Lower')
+    with open(pjoin("folders", "text", "guess.txt"), 'w') as file:
+        file.write(f'{current}\n{int(guesses)+1}')
 
 
 # @slash.slash(description='you')
@@ -412,9 +386,7 @@ async def me(message):
 # @slash.slash(description='random swear word')
 @client.command(pass_context=True)
 async def fuck(message):
-    with open(folders_path+'/text/swear.txt', 'r') as file:
-        words = [line for line in file]
-
+    words = list(open(pjoin("folders", "text", "swear.txt")))
     await my_send(message, random.choice(words))
 
 
@@ -437,18 +409,18 @@ async def insult(message, *, ping):
             break
 
     if ping.lower() == 'spaghett bot':
-        with open(folders_path+"/text/insult_bot_message.txt") as f:
+        with open(pjoin("folders", "text", "insult_bot_message.txt")) as f:
             await my_send(message, f.read().replace("*name*", f"<@{name}>"))
             return
 
     for i in 'nouns', 'adjectives', 'actions':
-        with open(f'{folders_path}+/text/{i}.txt', 'r') as file:
-            if i == 'nouns':
-                nouns = [line[:-1] for line in file]
-            elif i == 'adjectives':
-                adjectives = [line[:-1] for line in file]
-            elif i == 'actions':
-                actions = [line[:-1] for line in file]
+        lines = open(pjoin("folders", "text", f"{i}.txt")).read().splitlines()
+        if i == 'nouns':
+            nouns = lines
+        elif i == 'adjectives':
+            adjectives = lines
+        elif i == 'actions':
+            actions = lines
 
     if not found:
         await my_send(channel, 'No such member. Dumb fuck.')
@@ -462,7 +434,6 @@ async def insult(message, *, ping):
 # @slash.slash(description='4-20 A-s')
 @client.command(pass_context=True)
 async def a(message):
-    channel = message.channel
     auth = str(message.author)[:str(message.author).find('#')]
     # if auth != "Yelov":
     #     await mySend(message, 'no')
@@ -472,37 +443,31 @@ async def a(message):
         return
     num = random.randint(4, 20)
     stats = {}
-    curr_user = str(message.author), False
-    additional, send = '', ''
-
+    curr_user = str(message.author)
+    got_max = False
+    send = ['A' * num]
     if num == 20:
-        curr_user = str(message.author), True
-        additional = '\nFull-length A'
-
+        got_max = True
+        send.append("Full-length A")
     elif num == 4:
-        additional = (f"\nngl {auth}, that's kinda cringe")
-
-    send += 'A' * num
-    send += additional
+        send.append(f"ngl {auth}, that's kinda cringe")
+    send = "\n".join(send)
 
     await my_send(message, send)
 
-    with open(folders_path+'/text/a_stats.txt', 'r') as f:
+    with open(pjoin("folders", "text", "a_stats.txt")) as f:
         for line in f:
             spl = line.split()
-            stats[spl[0]] = [spl[1], spl[2], spl[3]]
-    rnd = ('write random u fkin cat', 'something something random', 'go do rng', 'go post fucky wucky in rand..ucky')
-    with open(folders_path+'/text/a_stats.txt', 'w') as f:
+            stats[spl[0]] = spl[1:]
+    with open(pjoin("folders", "text", "a_stats.txt"), 'w') as f:
         for name, stat in stats.items():
-            if name == curr_user[0]:
-                if name == "Averso#5633" and not int(stat[0]) % 10:
-                    await my_send(channel, random.choice(rnd))
-                if curr_user[1]:
-                    f.write(f'{name} {int(stat[0])+1} {int(stat[1])+1} {int(stat[2])+num}\n')
-                else:
-                    f.write(f'{name} {int(stat[0])+1} {int(stat[1])} {int(stat[2])+num}\n')
-            else:
-                f.write(f'{name} {int(stat[0])} {int(stat[1])} {int(stat[2])}\n')
+            guess_count, twenty_count, total_sum = [int(s) for s in stat]
+            if name == curr_user:
+                guess_count += 1
+                total_sum += num
+            if got_max:
+                twenty_count += 1
+            f.write(f'{name} {guess_count} {twenty_count} {total_sum}\n')
 
 
 # @slash.slash(description="{All guesses/full-length}. Argument <all> for everyone's stats.")
@@ -517,34 +482,34 @@ async def staats(message, everyone=''):
         evr = True
     curr_user = str(message.author)
 
-    with open(folders_path+'/text/a_stats.txt', 'r') as f:
+    with open(pjoin("folders", "text", "a_stats.txt"), 'r') as f:
         for line in f:
             spl = line.split()
             stats[spl[0]] = [spl[1], spl[2], spl[3]]
             if spl[0] == curr_user and not evr:
                 try:
                     await my_send(channel, f"""{curr_user[:curr_user.find("#")]}: MAX - {round((int(spl[2])/int(spl[1])*100), 2)}% | AVG - {round(int(spl[3])/int(spl[1]), 2)} | {int(spl[1])}""")
-                except:
+                except ZeroDivisionError:
                     await my_send(channel, 'imagine dividing by zero. yikes :feelsweird:')
                 break
 
-    if evr:
-        out = ''
-        for name, stat in stats.items():
-            short = name[:name.find('#')]
-            if int(stat[1]) != 0 or int(stat[0]) != 0 or int(stat[2]) != 0:
-                out += f"""{short}: MAX - {round((int(stat[1]) / int(stat[0])*100), 2)}% | AVG - {round(int(stat[2])/int(stat[0]), 2)} | {int(stat[0])}\n"""
+    if not evr:
+        return
+    out = ''
+    for name, stat in stats.items():
+        short = name[:name.find('#')]
+        if int(stat[1]) != 0 or int(stat[0]) != 0 or int(stat[2]) != 0:
+            out += f"""{short}: MAX - {round((int(stat[1]) / int(stat[0])*100), 2)}% | AVG - {round(int(stat[2])/int(stat[0]), 2)} | {int(stat[0])}\n"""
 
-        await my_send(message, out)
+    await my_send(message, out)
 
 
 # @slash.slash(description='sad')
 @client.command(pass_context=True)
 async def badbot(message):
-    channel = message.channel
     string = str(message.author)
     string = string[:string.find("#")]
-    await my_send(channel, f'{string} go commit die')
+    await my_send(message.channel, f'{string} go commit die')
 
 
 # @slash.slash(description='owo')
@@ -556,21 +521,15 @@ async def goodbot(ctx):
 # @slash.slash(description='when u feel bad')
 @client.command(pass_context=True)
 async def f(ctx):
-    with open(folders_path+'/text/f.txt', 'r') as f:
-        order = []
-        for line in f:
-            if line.find('\n') == -1:
-                order.append(line)
-            else:
-                order.append(line[:line.find('\n')])
+    with open(pjoin("folders", "text", "f.txt")) as f:
+        order = f.read().splitlines()
 
     choice = random.choice(order[:10])
+    order.remove(choice)
+    order.append(choice)
 
-    with open(folders_path+'/text/f.txt', 'w') as f:
-        for line in order:
-            if line != choice:
-                f.write(f'{line}\n')
-        f.write(f'{choice}\n')
+    with open(pjoin("folders", "text", "f.txt"), 'w') as f:
+        f.write("\n".join(order))
 
     await my_send(ctx, choice)
 
@@ -578,14 +537,14 @@ async def f(ctx):
 # @slash.slash(description='add something bad / sad / angry / depressing')
 @client.command(pass_context=True)
 async def addf(ctx, *, string):
-    with open(folders_path+'/text/f.txt', 'a') as file:
+    with open(pjoin("folders", "text", "f.txt"), 'a') as file:
         file.write(f'{string}\n')
 
 
 # @slash.slash(description='image from <subreddit>, add "text" at the end for text posts')
 @client.command(pass_context=True)
 async def reddit(message, sub, text=None):
-    with open(folders_path+'/text/reddit.txt', 'r') as f:
+    with open(pjoin("folders", "text", "reddit.txt"), 'r') as f:
         data = [line[:-1] for line in f]
 
     reddit = praw.Reddit(client_id=data.pop(),
@@ -614,13 +573,13 @@ async def reddit(message, sub, text=None):
         url = post.url
         ext = url[-4:]
         if ext in (".jpg", ".png"):
-            urllib.request.urlretrieve(url, folders_path+'/send/reddit.png')
+            urllib.request.urlretrieve(url, pjoin("folders", "send", "reddit.png"))
             break
         if post == posts[-1]:
             await my_send(message, "*Couldn't find an image.*")
             return
     await my_send(message, f'****Subreddit****: r/{sub}')
-    await my_send(message.channel, discord.File(folders_path+"/send/reddit.png", folders_path+"/send/reddit.png"))
+    await my_send(message.channel, discord.File(pjoin("folders", "send", "reddit.png"), pjoin("folders", "send", "reddit.png")))
 
 
 # @slash.slash(description='random coomer subreddit')
@@ -631,7 +590,7 @@ async def coomer(message):
     if str(message.author) not in users_allowed:
         await my_send(message, """ye coming right up.... ooh im
 sooorry, seems like your reddit karma is too low""")
-        return 0
+        return
 
     chose = random.choice(["petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
                            "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
@@ -644,25 +603,28 @@ sooorry, seems like your reddit karma is too low""")
 # @slash.slash(description='generates a random colour')
 @client.command(pass_context=True)
 async def colour(ctx):
+    global curr_colour
     r, g, b = random.randrange(256), random.randrange(256), random.randrange(256)
-    img = Image.new('RGB', (400, 400), (r, g, b))
-    img.save('colour.jpg')
-    with open(folders_path+'/text/colours.txt', 'a') as f:
-        f.write(f'{r} {g} {b} : ')
-    await my_send(ctx, discord.File("colour.jpg", "colour.jpg"))
+    file = Image.new('RGB', (400, 400), (r, g, b)).save(pjoin("folders", "send", "colour.jpg"))
+    curr_colour = (r, g, b)
+    await my_send(ctx, discord.File(file, filename=file))
 
 
 # @slash.slash(description='names the last generated colour')
 @client.command(pass_context=True)
 async def namecolour(ctx, *, name):
-    with open(folders_path+'/text/colours.txt', 'a') as f:
-        f.write(f'{name}\n')
+    if curr_colour is None:
+        await my_send(ctx, "No colour was generated")
+        return
+    r, g, b = curr_colour
+    with open(pjoin("folders", "text", "colours.txt"), 'a') as f:
+        f.write(f'{r} {g} {b} : {name}\n')
 
 
 # @slash.slash(description='lists named colours')
 @client.command(pass_context=True)
 async def colourlist(ctx):
-    with open(folders_path+'/text/colours.txt', 'r') as f:
+    with open(pjoin("folders", "text", "colours.txt"), 'r') as f:
         arr = [line[line.find(':')+2: -1] for line in f]
     send = ''.join(f'{prvok}\n' for prvok in arr)
     await my_send(ctx, send)
@@ -671,21 +633,23 @@ async def colourlist(ctx):
 # @slash.slash(description='shows <name> colour')
 @client.command(pass_context=True)
 async def showcolour(ctx, *, name):
-    with open(folders_path+'/text/colours.txt', 'r') as f:
-        for line in f:
-            if line[line.find(':')+2: -1] == name:
-                r, g, b = line[:line.find(':')-1].split()
-                img = Image.new('RGB', (400, 400), (int(r), int(g), int(b)))
-                img.save(folders_path+'/send/colour.jpg')
-                await my_send(ctx, discord.File(folders_path+'/send/colour.jpg', folders_path+'/send/colour.jpg'))
-                break
+    for line in open(pjoin("folders", "text", "colours.txt")).read().splitlines():
+        rgb, curr_name = line.split(" : ")
+        if curr_name == name:
+            r, g, b = [int(c) for c in rgb.split()]
+            img = Image.new('RGB', (400, 400), (r, g, b))
+            img.save(pjoin("folders", "send", "colour.jpg"))
+            await my_send(ctx, discord.File(pjoin("folders", "send", "colour.jpg"), pjoin("folders", "send", "colour.jpg")))
+            return
+
+    await my_send(ctx, "Colour not found")
 
 
 # @slash.slash(description='<video_name> / lists videos when no argument')
 @client.command(pass_context=True)
 async def video(ctx, *, video=''):
-    path = folders_path+'/send/videos'
-    videos = [f for f in listdir(path) if isfile(join(path, f)) and (f[-4:] == '.mp4')]
+    path = pjoin("folders", "send", "videos")
+    videos = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f)) and (f[-4:] == '.mp4')]
 
     if not video:
         vid_list = ''.join(f"{vid[:vid.find('.')]}, " for vid in videos)
@@ -696,7 +660,7 @@ async def video(ctx, *, video=''):
     for vid in videos:
         if vid[:vid.find('.')] == video:
             found = True
-            send = f'{folders_path}/send/videos/{vid}'
+            send = pjoin("folders", "send", "videos", vid)
     if not found:
         await my_send(ctx, 'No such video.')
     else:
@@ -706,21 +670,21 @@ async def video(ctx, *, video=''):
 # # @slash.slash(description='when a is not enough')
 @client.command(pass_context=True)
 async def AAA(ctx):
-    send = folders_path+'/send/videos/AAA.mp4'
+    send = pjoin("folders", "send", "videos", "aaa.mp4")
     await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='could i feel normal for one fucking moment please')
 @client.command(pass_context=True)
 async def EEE(ctx):
-    send = folders_path+'/send/videos/EEE.mp4'
+    send = pjoin("folders", "send", "videos", "EEE.mp4")
     await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='ptsd end of eva warning')
 @client.command(pass_context=True)
 async def AAAEEE(ctx):
-    send = folders_path+'/send/videos/AAAEEE.mp4'
+    send = pjoin("folders", "send", "videos", "AAAEEE.mp4")
     await my_send(ctx, discord.File(send, send))
 
 
@@ -728,39 +692,39 @@ async def AAAEEE(ctx):
 @client.command(pass_context=True)
 async def whOMEGALUL(ctx):
     i = random.randint(1, 4)
-    send = f'{folders_path}/send/videos/who{i}.mp4'
+    send = pjoin("folders", "send", "videos", f"who{i}.mp4")
     await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='plz audio <filename> (no extension)')
 @client.command(pass_context=True)
 async def audio(ctx, *filename):
-    await my_send(ctx, discord.File(f'{folders_path}/send/{" ".join(filename)}.mp3'))
+    await my_send(ctx, discord.File(pjoin("folders", "send", "videos", " ".join(filename).mp3)))
 
 
 # @slash.slash(description="tumblin' down")
 @client.command(pass_context=True)
 async def deth(ctx):
-    send = folders_path+'/send/tod.mp3'
+    send = pjoin("folders", "send", "tod.mp3")
     await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='re:zero spook sound')
 @client.command(pass_context=True)
 async def aeoo(ctx):
-    send = folders_path+'/send/aeoo.mp3'
+    send = pjoin("folders", "send", "aeoo.mp3")
     await my_send(ctx, discord.File(send, send))
 
 
 # @slash.slash(description='random meme')
 @client.command(pass_context=True)
 async def meme(ctx):
-    path = folders_path+"\memes"
-    files = [f for f in listdir(path) if isfile(join(path, f))]
+    path = pjoin("folders", "memes")
+    files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f))]
     choice = random.choice(files)
-    img = Image.open(f'{path}\{choice}')
+    img = Image.open(pjoin(path, choice))
 
-    save = folders_path+'/send/meme.png'
+    save = pjoin("folders", "send", "meme.png")
 
     img.save(save)
     file = discord.File(save, filename=save)
@@ -770,14 +734,10 @@ async def meme(ctx):
 # @slash.slash(description='Cuts message into multiple lines.')
 @client.command(pass_context=True)
 async def cut(ctx, *, message):
-    send = ''
     if len(message.split()) == 1:
-        for i in message:
-            send += f'{i}\n'
+        await my_send(ctx, "\n".join(list(message)))
     else:
-        for i in message.split():
-            send += f'{i}\n'
-    await my_send(ctx, send)
+        await my_send(ctx, "\n".join(message.split()))
 
 
 # @slash.slash(description='Argument is the name of the text file to be sent.')
@@ -785,12 +745,8 @@ async def cut(ctx, *, message):
 async def text(message, filename=''):
     if not filename:
         await my_send(message, 'specify file name')
-    else:
-        out = ''
-        with open(f'{folders_path}/text/{filename}.txt', 'r') as f:
-            for line in f:
-                out += line
-        await my_send(message, out)
+        return
+    await my_send(message, "".join(open(pjoin("folders", "text", f"{filename}.txt")).readlines()))
 
 
 # @slash.slash(description='You can specify with argument, e.g. "temperature", "humidity", ..')
@@ -822,7 +778,7 @@ async def weather(ctx, *, specify=''):
     info['humidex'] = weather.humidex
     info['heat_index'] = weather.heat_index
 
-    with open(folders_path+'/text/weather_comment.txt', 'r') as f:
+    with open(pjoin("folders", "text", "weather_comment.txt")) as f:
         comments = {}
         for line in f:
             if line[0] == '/':
@@ -873,7 +829,7 @@ async def sorry(message, name=''):
             await my_send(channel, """i'm sorry to user who doesn't exist.. 
 or mby it was someone's nickname, but i deleted that cuz of some bug i can't be bothered to fix :)""")
             return
-        with open(folders_path+'/text/sry.txt', 'r') as f:
+        with open(pjoin("folders", "text", "sry.txt"), 'r') as f:
             send = f.readline()
         await my_send(channel, f"<@{name_d}> {send}")
 
@@ -906,111 +862,122 @@ async def answer(message, *, question):
 
 # @slash.slash(description='Random entry if no argument. [word] - word to find, [additional] - "count" / "allinfo" / "random"')
 @client.command(pass_context=True)
-async def journal(message, word="", additional=""):
+async def journal(message, *, action=None):
 
     class Journal:
 
         def __init__(self):
-            self.time = time.time()
-            self.base = folders_path+"\\Journal format"
-            self.path = self.base+"\\Diarium"
-            self.files = [f for f in listdir(self.path)]
-            self.count_all = 0
-            with open(self.base+'\\files.txt') as f:
-                files_count = int(f.read())
-                if files_count != len(self.files):
-                    print('Formatting')
-                    self.format()
-                    self.words = {}
-                    self.count = 0
-                    self.freq_table = self.freq()
-                    with shelve.open(self.base+'\\journal') as jour:
-                        jour['count_all'] = self.count_all
-                        jour['words'] = self.words
-                        jour['count'] = self.count
-                        jour['freq'] = self.freq_table
-                    print('Done formatting')
+            self.base = pjoin("folders", "Journal format")
+            self.path = pjoin(self.base, "Diarium")
+            self.files = list(os.listdir(self.path))
+            self.years = self.get_years()
+            self.word_count_list = []
+            self.word_count_dict = {}
+            self.files_list_path = pjoin(self.base, "files.txt")
+            self.check_file_count_mismatch()
+
+        def check_file_count_mismatch(self):
+            if not os.path.exists(self.files_list_path):
+                open(self.files_list_path, "w").write("-1")
+            files_num = int(open(self.files_list_path).read())
+            # files_num -> last checked number of files
+            # len(self.files) -> number of files in the Diarium folder
+            if files_num != len(self.files):
+                self.console.print("File count mismatch, formatting...")
+                self.write_dict()
+                self.update_file_count()
+            else:
+                self.init_dict()
+
+        def init_dict(self):
+            try:
+                self.read_dict()
+            except KeyError:
+                self.write_dict()
+            except FileNotFoundError:
+                Path(pjoin(self.base, "shelve")).mkdir(parents=True, exist_ok=True)
+                self.write_dict()
+
+        def read_dict(self):
+            with shelve.open(pjoin(self.base, "shelve", "journal")) as jour:
+                self.word_count_list = jour["words"]
+                self.word_count_dict = jour["freq"]
+
+        def write_dict(self):
+            self.create_word_frequency()
+            with shelve.open(pjoin(self.base, "shelve", "journal")) as jour:
+                jour["words"] = self.word_count_list
+                jour["freq"] = self.word_count_dict
+                
+        def create_word_frequency(self):
+            file_content_list = []
+            for file in self.files:
+                with open(pjoin(self.path, file), encoding="utf-8") as f:
+                    file_content_list.append(f.read())
+            content = "".join(file_content_list).lower()
+            self.word_count_dict = Counter(re.findall("\w+", content))
+            self.word_count_list = sorted(self.word_count_dict.items(), key=lambda x: x[1], reverse=True)
+
+        def get_years(self):
+            YEAR_START_IX = 8
+            YEAR_END_IX = YEAR_START_IX + 4
+            return {int(file[YEAR_START_IX : YEAR_END_IX]) for file in self.files}
+
+        def update_file_count(self):
+            open(self.files_list_path, "w").write(str(len(self.files)))
+
+        def get_most_frequent_words(self, count=20):
+            return self.word_count_list[:count]
+
+        def get_unique_word_count(self):
+            return len(self.word_count_dict)
+
+        def get_total_word_count(self):
+            return sum(self.word_count_dict.values())
+
+        def find_word_in_journal(self, word):
+            self.occurences = 0
+            self.output_list = []
+            for file in self.files:
+                self._find_word_in_file(file, word)
+
+        def _find_word_in_file(self, file, word):
+            file_content = open(pjoin(self.path, file), encoding="utf-8").read()
+            date_inserted = False
+            sentences = self._split_text_into_sentences(file_content)
+            for sentence in sentences:
+                if not re.search(word, sentence, re.IGNORECASE):
+                    continue
+                if not date_inserted:
+                    self._insert_date(file)
+                    date_inserted = True
+                self._find_word_in_sentence(sentence, word)
+            if date_inserted:
+                self.output_list.append("\n")
+
+        def _split_text_into_sentences(self, text):
+            split_regex = "(?<=[.!?\n])\s+"
+            return [sentence.strip() for sentence in re.split(split_regex, text)]
+                
+        def _find_word_in_sentence(self, sentence, word):
+            highlight_style = "**"
+            for curr_word in sentence.split():
+                if word.lower() in curr_word.lower():
+                    self.occurences += 1
+                    self.output_list.append(f"{highlight_style}{curr_word}{highlight_style}")
                 else:
-                    with shelve.open(self.base+'\\journal') as jour:
-                        self.count_all = jour['count_all']
-                        self.words = jour['words']
-                        self.count = jour['count']
-                        self.freq_table = jour['freq']
-            self.time = time.time() - self.time
+                    self.output_list.append(curr_word)
+            self.output_list[-1] += "\n"
 
-        def format(self):
-            for j in '2017', '2018', '2019', '2020', '2021':
-                for i in range(1, 13):
-                    Path(f'{self.base}/{j}/{i}').mkdir(parents=True, exist_ok=True)
-            self.files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
-            for file in self.files:
-                with open(f'{self.path}\\{file}', 'r', errors='ignore') as f:
-                    content = f.read()
-                    txt = file[8:].split('-')
-                    txt[2] = txt[2][:txt[2].find('.')]
-                    if txt[2][0] == '0':
-                        txt[2] = txt[2][1:]
-                    if txt[1][0] == '0':
-                        txt[1] = txt[1][1:]
-                    with open(f'{self.base}/{txt[0]}/{txt[1]}/{txt[2]}.txt', 'w') as new:
-                        new.write(content)
-            with open(self.base+'\\files.txt', 'w') as f:
-                f.write(str(len(self.files)))
+        def _insert_date(self, file_name):
+            file_date_begin = file_name.index("2")
+            file_date_end = file_name.index(".txt")
+            year, month, day = file_name[file_date_begin : file_date_end].split("-")
+            date_style = "*"
+            self.output_list.append(f"{date_style}Date: {day}.{month}.{year}{date_style}\n")
 
-        def freq(self):
-            for file in self.files:
-                with open(f'{self.path}\\{file}', 'r', encoding='utf-8') as f:
-                    txt = f.read()
-                    for sentence in re.split('[.\n]+', txt):
-                        for word in sentence.split():
-                            self.count_all += 1
-                            if word[-1] == ',':
-                                word = word[:-1]
-                            word = word.lower()
-                            self.words[word] = self.words.get(word, 0) + 1
-            return sorted(self.words.items(), key=lambda x: x[1], reverse=True)
-
-        def frequency_table(self, count=20):
-            return self.freq_table[:count]
-
-        def total_word_count(self, unique=False):
-            if unique:
-                return len(self.freq_table)
-            return self.count_all
-
-        def find_word(self, word):
-            start = time.time()
-            out = ''
-            for file in self.files:
-                with open(f'{self.path}\\{file}', 'r', encoding='utf-8') as f:
-                    txt = f.read()
-                    putDate, foundWord = False, False
-                    for sentence in re.split('[.\n]+', txt):
-                        sentence = sentence.strip()
-                        if re.search(word, sentence, re.IGNORECASE):
-                            if not putDate:
-                                y, d, m = file[8:-4].split('-')
-                                out += f'**Date: {d}.{m}.{y}**\n'
-                            putDate, foundWord = True, True
-                            for w in sentence.split():
-                                if word.lower() in w.lower():
-                                    self.count += 1
-                                    out += f'**{w}** '
-                                else:
-                                    out += f'{w} '
-                            out = out[:-1]+".\n"
-                if foundWord:
-                    out += '\n'
-            find_time = time.time() - start
-            self.time += find_time
-            out += f'🡒 **{word}** was found **{self.count} times**\n'
-            out += f'**🡒 WORD FOUND IN:** {round(find_time, 2)}s\n🡒 **TOTAL TIME (incl. dictionary):** {round(self.time, 2)}s'
-            return out
-
-        def random_entry(self):
-            files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
-            with open(self.path+"\\"+random.choice(files), 'r', encoding='utf-8') as f:
-                return f.read()
+        def get_random_day(self):
+            return open(pjoin(self.path, random.choice(self.files)), encoding="utf-8").read()
 
     if str(message.author)[:str(message.author).find("#")] != 'Yelov':
         await my_send(message, "Ain't your journal bro")
@@ -1019,39 +986,36 @@ async def journal(message, word="", additional=""):
     journal_text = ""
     jour = Journal()
 
-    if word:
-        if additional == "count":
-            jour.find_word(word)
-            journal_text += f'The word **{word}** was found {jour.count} times'
-        elif additional == "":
-            journal_text += f'{jour.find_word(word)}'
-        elif additional in ["random", "allinfo"]:
-            journal_text += "Leave the [word] argument empty if you want a random entry or all info"
-        else:
-            journal_text += "You inputted a [word] to search for, set [additional] to 'count' or leave it empty"
-    else:
-        if additional == "random":
-            journal_text += "**RANDOM ENTRY:**\n\n" + jour.random_entry()
-        elif additional == "allinfo":
-            journal_text += f'\n**All words count:** {jour.total_word_count(False)}\n'
-            journal_text += f'**Unique words count:** {jour.total_word_count(True)}\n'
-            journal_text += f'**The most common words:** {jour.frequency_table()}\n'
-        elif additional == "count":
-            journal_text += "Input a [word] to count the occurences of"
-        else:
-            journal_text += "Either input a word or set [additional] to 'random'/'allinfo'"
+    if action is None:
+        help_l = []
+        help_l.append("-f {word} -> finds {word}")
+        help_l.append("-c {word} -> number of {word} occurences")
+        help_l.append("-r -> random day")
+        await my_send(message, "\n".join(help_l))
+        return
 
-    if len(journal_text) > 2000:
-        for msg in split_long(journal_text):
-            await my_send(message, msg)
-    else:
-        await my_send(message, journal_text)
+    if action[:2] not in ("-f", "-c", "-r"):
+        await my_send(message, "Incorrect syntax")
+        return
+    
+    do = action.split()[0]
+    inp = " ".join(action.split()[1:]) if action != "-r" else ""
+    if do == "-f":
+        jour.find_word_in_journal(inp)
+        journal_text += " ".join(jour.output_list)
+    elif do == "-c":
+        jour.find_word_in_journal(inp)
+        journal_text += f'The word **{inp}** was found {jour.occurences} times'
+    elif do == "-r":
+        journal_text += "**RANDOM ENTRY:**\n\n" + jour.get_random_day()
+
+    await my_send(message, journal_text)
 
 
 # @slash.slash(description='Random message from Discord. Argument specifies the channel, default is "main"')
 @client.command(pass_context=True)
 async def sadboyz(message, channel='main', user=''):
-    with open(f'{folders_path}/SadBoyz/{channel}.txt', 'r', errors='ignore') as file:
+    with open(pjoin("folders", "SadBoyz", f"{channel}.txt"), errors='ignore') as file:
         arr = []
         text = ''
         for line in file:
@@ -1065,14 +1029,14 @@ async def sadboyz(message, channel='main', user=''):
                 text += line
     if not user:
         await my_send(message, random.choice(arr))
-    else:
+        return
+    out = arr.pop(random.randrange(len(arr)))
+    while out.split()[0][2:-2] != user:
         out = arr.pop(random.randrange(len(arr)))
-        while out.split()[0][2:-2] != user:
-            out = arr.pop(random.randrange(len(arr)))
-            if not len(arr):
-                await my_send(message, 'Prolly wrong username or smth')
-                return
-        await my_send(message, out)
+        if not len(arr):
+            await my_send(message, 'Prolly wrong username or smth')
+            return
+    await my_send(message, out)
 
 
 # @slash.slash(description="plz dict <word> <define/synonyms/antonyms>")
@@ -1110,7 +1074,7 @@ async def dict(message, *, word_do=''):
 # @slash.slash(description="Random word from a dictionary")
 @client.command(pass_context=True)
 async def randomword(message):
-    with open(folders_path+'/text/words_alpha.txt', 'r') as f:
+    with open(pjoin("folders", "text", "words_alpha.txt")) as f:
         words = [line[:-1] for line in f]
     await my_send(message, random.choice(words))
 
@@ -1132,7 +1096,7 @@ async def ping(message):
 # @slash.slash(description="not kokot")
 @client.command(pass_context=True)
 async def send(ctx):
-    send = folders_path+'/send/kokot.mp3'
+    send = pjoin("folders", "send", "kokot.mp3")
     await my_send(ctx, discord.File(send, send))
 
 
@@ -1230,9 +1194,9 @@ async def play(message, *, url):
     def play_url(url, voice):
         global current_song
 
-        if os.path.isfile(folders_path+"/send/song.mp3"):
+        if os.path.isfile(pjoin("folders", "send", "song.mp3")):
             try:
-                os.remove(folders_path+"/send/song.mp3")
+                os.remove(pjoin("folders", "send", "song.mp3"))
             except:
                 pass
 
@@ -1242,21 +1206,21 @@ async def play(message, *, url):
         with YoutubeDL(ydl_opts) as ydl:
             print("Downloading", title)
             ydl.download([link])
-        for file in listdir(folders_path+"/./send"):
+        for file in os.listdir(pjoin("folders", ".", "send")):
             if file.startswith('ytdl'):
-                os.rename(f'{folders_path}/send/{file}', folders_path+"/send/song.mp3")
-        voice.play(discord.FFmpegPCMAudio(folders_path+"/send/song.mp3"), after=lambda e: queue(voice))
+                os.rename(pjoin("folders", "send", file), pjoin("folders", "send", "song.mp3"))
+        voice.play(discord.FFmpegPCMAudio(pjoin("folders", "send", "song.mp3")), after=lambda e: queue(voice))
         voice.source = discord.PCMVolumeTransformer(voice.source, volume=float(volume)/100)
         return link, title
 
     global song_queue
-    voiceChannel = message.author.voice.channel
-    if voiceChannel is None:
+    voice_channel = message.author.voice.channel
+    if voice_channel is None:
         await my_send(message, "You ain't connected dawg")
         return
     voice = discord.utils.get(client.voice_clients, guild=message.guild)
     if not voice:
-        await voiceChannel.connect()
+        await voice_channel.connect()
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
 
     if voice.is_playing() or voice.is_paused():
@@ -1273,16 +1237,15 @@ async def play(message, *, url):
 # @slash.slash(description="Plays an audio file in voice chat")
 @client.command(pass_context=True)
 async def playfile(ctx, *, url):
-    song_there = os.path.isfile(url)
-    voiceChannel = discord.utils.get(ctx.guild.voice_channels)
+    voice_channel = discord.utils.get(ctx.guild.voice_channels)
 
     try:
-        await voiceChannel.connect()
+        await voice_channel.connect()
     except:
         pass
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
 
-    if song_there and (voice.is_playing() or voice.is_paused()):
+    if os.path.isfile(url) and (voice.is_playing() or voice.is_paused()):
         voice.stop()
         time.sleep(1)
 
@@ -1320,7 +1283,6 @@ async def pause(ctx):
 # # @slash.slash(description="Resumes music")
 @client.command(pass_context=True)
 async def resume(ctx):
-    global current_song
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
         await my_send(ctx, "Not connected")
@@ -1350,7 +1312,6 @@ async def skip(ctx, num=1):
 
 @client.command(pass_context=True)
 async def queue(ctx):
-    global song_queue
     if not len(song_queue):
         await my_send(ctx, "The queue is empty")
         return
@@ -1404,7 +1365,7 @@ async def currentvolume(ctx):
     if not voice:
         await my_send(ctx, "Not connected")
     else:
-        await my_send(ctx, f"Current volume: {voice.source.volume*100}%")
+        await my_send(ctx, f"Current volume: {voice.source.volume * 100}%")
 
 
 @client.command(pass_context=True)
@@ -1413,7 +1374,7 @@ async def maximumpain(ctx):
     if not voice:
         await my_send(ctx, "Not connected")
     else:
-        voice.source.volume = float(1000000) / 100
+        voice.source.volume = float(1_000_000) / 100
 
 
 @client.command(pass_context=True)
@@ -1423,11 +1384,11 @@ async def maths(ctx, *, action):
             num = round(num, 3)
         except:
             num = round(num)
-        with open(folders_path+'/text/number.txt', 'w') as f:
+        with open(pjoin("folders", "text", "number.txt"), 'w') as f:
             f.write(str(num))
         return num
 
-    with open(folders_path+'/text/number.txt', 'r') as f:
+    with open(pjoin("folders", "text", "number.txt"), 'r') as f:
         num = Decimal(f.read())
         orig = num
 
@@ -1502,6 +1463,7 @@ async def maths(ctx, *, action):
 
 @client.command(pass_context=True)
 async def execute(ctx, *, code=''):
+
     @contextlib.contextmanager
     def stdoutIO(stdout=None):
         old = sys.stdout
@@ -1566,11 +1528,7 @@ async def aigenerate(ctx, *, prompt):
         else:
             new_output += line
     output = new_output
-    if len(output) > 2000:
-        for msg in split_long(output):
-            await my_send(ctx, msg)
-    else:
-        await my_send(ctx, output)
+    await my_send(ctx, output)
 
 
 @client.command(pass_context=True)
@@ -1626,7 +1584,7 @@ async def findword(ctx, where, part):
         await my_send(ctx, "Need to specify with begins/ends")
         return
     output = []
-    with open(folders_path+"/text/words_alpha.txt", 'r') as f:
+    with open(pjoin("folders", "text", "words_alpha.txt"), 'r') as f:
         for line in f:
             line = line[:-1]
             if where == 'begins':
@@ -1650,7 +1608,7 @@ not working, so that you wouldn't be able to see this ugly ass disgusting spaghe
 code you've ever seen. Who knows. You'll never know. You'll never see the code of this function. Ever.""")
         return
     out = "```Python\n"
-    with open(os.path.relpath("src")+"\\bot_functions.py", "r") as f:
+    with open(pjoin("src", "bot_functions.py")) as f:
         content = f.read()
     ix = content.find(f"async def {function}")
     if ix == -1:
@@ -1659,11 +1617,7 @@ code you've ever seen. Who knows. You'll never know. You'll never see the code o
     out += content[ix:]
     ix = min(out.find("@client"), out.find("@slash"))
     out = out[:ix]+"\n```"
-    if len(out) > 2000:
-        for msg in split_long(out):
-            await my_send(ctx, msg)
-    else:
-        await my_send(ctx, out)
+    await my_send(ctx, out)
 
 @client.command(pass_context=True)  # just testing wait_for()
 async def epicshit(ctx):
@@ -1673,10 +1627,10 @@ async def epicshit(ctx):
         await my_send(ctx, "Fuck yea, bitch.\nYou want [kokot] or [pica]?")
         msg = await client.wait_for('message', check=lambda m: m.author == ctx.author)
         if msg.content == "kokot":
-            file = discord.File(folders_path+"/imgs/kokot.jpg", filename=folders_path+"/imgs/kokot.jpg")
+            file = discord.File(pjoin("folders", "imgs", "kokot.jpg"), filename=pjoin("folders", "imgs", "kokot.jpg"))
             await my_send(ctx, file)
         elif msg.content == "pica":
-            file = discord.File(folders_path+"/imgs/pica.jpg", filename=folders_path+"/imgs/pica.jpg")
+            file = discord.File(pjoin("folders", "imgs", "pica.jpg"), filename=pjoin("folders", "imgs", "pica.jpg"))
             await my_send(ctx, file)
     elif msg.content == "no":
         await my_send(ctx, "You want a slap? [yes/yes]")
@@ -1744,5 +1698,5 @@ async def text2speech(ctx, *, input_text):
     wav = text2speech_model(input_text)["wav"]
     for mssg in messages:
         await mssg.delete()
-    sf.write(f'{folders_path}/send/text2speech.wav', wav.numpy(), text2speech_model.fs, "PCM_16")
-    await my_send(ctx, discord.File(f'{folders_path}/send/text2speech.wav'))
+    sf.write(pjoin("folders", "send", "text2speech.waw"), wav.numpy(), text2speech_model.fs, "PCM_16")
+    await my_send(ctx, discord.File(pjoin("folders", "send", "text2speech.waw")))
