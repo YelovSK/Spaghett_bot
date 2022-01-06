@@ -1,16 +1,17 @@
-# don't
-__pycache__/
-.*/
-.*
-DiscordChatExporter/
-Journal format/
-memes/
-SadBoyz/
-send/
-font.ttf
-*.exe
+# Hidden stuff
 *.jpg
+*.jpeg
 *.png
-*.txt
+*.ico
+*.mp4
+*.mp3
 *.wav
-!requirements.txt
+*.jfif
+
+# idk
+*.pyc
+*.ini
+*.txt
+*.json
+*.ttf
+*.sfk

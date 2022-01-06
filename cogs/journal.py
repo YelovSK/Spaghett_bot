@@ -1,11 +1,20 @@
-from collections import Counter
-from os.path import join as pjoin
-from pathlib import Path
+import json
 import os
+import random
 import random
 import re
 import shelve
 
+from message_send import bot_send
+from disnake.ext import commands
+from disnake.ext.commands import Context
+from os.path import join as pjoin
+
+from collections import Counter
+from pathlib import Path
+
+with open("config.json") as file:
+    config = json.load(file)
 
 class Journal:
 
@@ -121,3 +130,47 @@ class Journal:
 
     def get_random_day(self):
         return open(pjoin(self.path, random.choice(self.files)), encoding="utf-8").read()
+
+
+class JournalFind(commands.Cog, name="journal"):
+    def __init__(self, bot):
+        self.bot = bot
+
+
+    @commands.command()
+    async def journal(self, ctx: Context, *, action=None):
+        if str(ctx.author)[:str(ctx.author).find("#")] != 'Yelov':
+            await bot_send(ctx, "Ain't your journal bro")
+            return
+
+        journal_text = ""
+        jour = Journal()
+
+        if action is None:
+            help_l = [
+                '-f {word} -> finds {word}',
+                '-c {word} -> number of {word} occurences',
+                '-r -> random day',
+            ]
+            await bot_send(ctx, "\n".join(help_l))
+            return
+
+        if action[:2] not in ("-f", "-c", "-r"):
+            await bot_send(ctx, "Incorrect syntax")
+            return
+
+        do = action.split()[0]
+        inp = " ".join(action.split()[1:]) if action != "-r" else ""
+        if do == "-f":
+            jour.find_word_in_journal(inp)
+            journal_text += " ".join(jour.output_list)
+        elif do == "-c":
+            jour.find_word_in_journal(inp)
+            journal_text += f'The word **{inp}** was found {jour.occurences} times'
+        elif do == "-r":
+            journal_text += "**RANDOM ENTRY:**\n\n" + jour.get_random_day()
+
+        await bot_send(ctx, journal_text)
+
+def setup(bot):
+    bot.add_cog(JournalFind(bot))
