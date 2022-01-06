@@ -5,8 +5,6 @@ import contextlib
 import math
 import os
 import random
-import re
-import shelve
 import sys
 import time
 import requests
@@ -18,23 +16,19 @@ from os.path import join as pjoin
 from datetime import timezone
 from decimal import Decimal
 from io import StringIO
-from pathlib import Path
 from espnet2.bin.tts_inference import Text2Speech
 from PIL import Image, ImageDraw, ImageFont
 from PyDictionary import PyDictionary
 from pyowm.owm import OWM
-from spotipy import Spotify
-from spotipy.oauth2 import SpotifyClientCredentials
-from yt_dlp import YoutubeDL
-from youtubesearchpython import Video, VideosSearch
-from collections import Counter
 
+from MusicPlay import MusicPlay
+from JournalFind import Journal
 from help import *
+
 
 stop = False
 remindrun = False
 users_allowed = open(pjoin("folders", "text", "users_allowed.txt")).read().splitlines()
-song_queue = []
 current_song = ''
 text2speech_model = None
 curr_colour = None
@@ -43,7 +37,7 @@ with open("ClientKey.txt") as f:
     for line in f:
         key, val = line.strip().split()
         keys[key] = val
-
+music_play = MusicPlay(id=keys["spotify-id"], secret=keys["spotify-secret"])
 
 def split_long(text):    # todo formatting breaks if split at **word
     mssgs = []
@@ -164,7 +158,7 @@ async def word(ctx, do='', *, word=''):
     if not do:
         await my_send(ctx, '"list" / "define <word>" / "add <word : definition>"')
     elif do in 'add':
-        with open(dictionary_path, 'r') as file:
+        with open(dictionary_path) as file:
             for line in file:
                 index = line.find(':')
                 dick[line[:index-1]] = line[index+2:]
@@ -175,7 +169,7 @@ async def word(ctx, do='', *, word=''):
                 print(f'Added {word}')
 
     elif do == 'define':
-        with open(dictionary_path, 'r') as file:
+        with open(dictionary_path) as file:
             for line in file:
                 index = line.find(':')
                 if line[:index-1] == word:
@@ -183,8 +177,7 @@ async def word(ctx, do='', *, word=''):
 
     elif do == 'list':
         send = ''
-
-        with open(dictionary_path, 'r') as file:
+        with open(dictionary_path) as file:
             for line in file:
                 index = line.find(':')
                 send += f'{line[:index-1]}\n'
@@ -482,7 +475,7 @@ async def staats(message, everyone=''):
         evr = True
     curr_user = str(message.author)
 
-    with open(pjoin("folders", "text", "a_stats.txt"), 'r') as f:
+    with open(pjoin("folders", "text", "a_stats.txt")) as f:
         for line in f:
             spl = line.split()
             stats[spl[0]] = [spl[1], spl[2], spl[3]]
@@ -544,7 +537,7 @@ async def addf(ctx, *, string):
 # @slash.slash(description='image from <subreddit>, add "text" at the end for text posts')
 @client.command(pass_context=True)
 async def reddit(message, sub, text=None):
-    with open(pjoin("folders", "text", "reddit.txt"), 'r') as f:
+    with open(pjoin("folders", "text", "reddit.txt")) as f:
         data = [line[:-1] for line in f]
 
     reddit = praw.Reddit(client_id=data.pop(),
@@ -564,8 +557,8 @@ async def reddit(message, sub, text=None):
                 if post.selftext:
                     await my_send(message, f'****Subreddit:**** r/{sub}\n****Title:**** {post.title}\n{post.ups}⇧ | {post.downs}⇩ \n\n{post.selftext}')
                     return
-            except:
-                pass
+            except Exception as e:
+                print(e)
         await my_send(message, 'No post with selftext.')
         return
 
@@ -624,7 +617,7 @@ async def namecolour(ctx, *, name):
 # @slash.slash(description='lists named colours')
 @client.command(pass_context=True)
 async def colourlist(ctx):
-    with open(pjoin("folders", "text", "colours.txt"), 'r') as f:
+    with open(pjoin("folders", "text", "colours.txt")) as f:
         arr = [line[line.find(':')+2: -1] for line in f]
     send = ''.join(f'{prvok}\n' for prvok in arr)
     await my_send(ctx, send)
@@ -829,7 +822,7 @@ async def sorry(message, name=''):
             await my_send(channel, """i'm sorry to user who doesn't exist.. 
 or mby it was someone's nickname, but i deleted that cuz of some bug i can't be bothered to fix :)""")
             return
-        with open(pjoin("folders", "text", "sry.txt"), 'r') as f:
+        with open(pjoin("folders", "text", "sry.txt")) as f:
             send = f.readline()
         await my_send(channel, f"<@{name_d}> {send}")
 
@@ -864,121 +857,6 @@ async def answer(message, *, question):
 @client.command(pass_context=True)
 async def journal(message, *, action=None):
 
-    class Journal:
-
-        def __init__(self):
-            self.base = pjoin("folders", "Journal format")
-            self.path = pjoin(self.base, "Diarium")
-            self.files = list(os.listdir(self.path))
-            self.years = self.get_years()
-            self.word_count_list = []
-            self.word_count_dict = {}
-            self.files_list_path = pjoin(self.base, "files.txt")
-            self.check_file_count_mismatch()
-
-        def check_file_count_mismatch(self):
-            if not os.path.exists(self.files_list_path):
-                open(self.files_list_path, "w").write("-1")
-            files_num = int(open(self.files_list_path).read())
-            # files_num -> last checked number of files
-            # len(self.files) -> number of files in the Diarium folder
-            if files_num != len(self.files):
-                self.console.print("File count mismatch, formatting...")
-                self.write_dict()
-                self.update_file_count()
-            else:
-                self.init_dict()
-
-        def init_dict(self):
-            try:
-                self.read_dict()
-            except KeyError:
-                self.write_dict()
-            except FileNotFoundError:
-                Path(pjoin(self.base, "shelve")).mkdir(parents=True, exist_ok=True)
-                self.write_dict()
-
-        def read_dict(self):
-            with shelve.open(pjoin(self.base, "shelve", "journal")) as jour:
-                self.word_count_list = jour["words"]
-                self.word_count_dict = jour["freq"]
-
-        def write_dict(self):
-            self.create_word_frequency()
-            with shelve.open(pjoin(self.base, "shelve", "journal")) as jour:
-                jour["words"] = self.word_count_list
-                jour["freq"] = self.word_count_dict
-                
-        def create_word_frequency(self):
-            file_content_list = []
-            for file in self.files:
-                with open(pjoin(self.path, file), encoding="utf-8") as f:
-                    file_content_list.append(f.read())
-            content = "".join(file_content_list).lower()
-            self.word_count_dict = Counter(re.findall("\w+", content))
-            self.word_count_list = sorted(self.word_count_dict.items(), key=lambda x: x[1], reverse=True)
-
-        def get_years(self):
-            YEAR_START_IX = 8
-            YEAR_END_IX = YEAR_START_IX + 4
-            return {int(file[YEAR_START_IX : YEAR_END_IX]) for file in self.files}
-
-        def update_file_count(self):
-            open(self.files_list_path, "w").write(str(len(self.files)))
-
-        def get_most_frequent_words(self, count=20):
-            return self.word_count_list[:count]
-
-        def get_unique_word_count(self):
-            return len(self.word_count_dict)
-
-        def get_total_word_count(self):
-            return sum(self.word_count_dict.values())
-
-        def find_word_in_journal(self, word):
-            self.occurences = 0
-            self.output_list = []
-            for file in self.files:
-                self._find_word_in_file(file, word)
-
-        def _find_word_in_file(self, file, word):
-            file_content = open(pjoin(self.path, file), encoding="utf-8").read()
-            date_inserted = False
-            sentences = self._split_text_into_sentences(file_content)
-            for sentence in sentences:
-                if not re.search(word, sentence, re.IGNORECASE):
-                    continue
-                if not date_inserted:
-                    self._insert_date(file)
-                    date_inserted = True
-                self._find_word_in_sentence(sentence, word)
-            if date_inserted:
-                self.output_list.append("\n")
-
-        def _split_text_into_sentences(self, text):
-            split_regex = "(?<=[.!?\n])\s+"
-            return [sentence.strip() for sentence in re.split(split_regex, text)]
-                
-        def _find_word_in_sentence(self, sentence, word):
-            highlight_style = "**"
-            for curr_word in sentence.split():
-                if word.lower() in curr_word.lower():
-                    self.occurences += 1
-                    self.output_list.append(f"{highlight_style}{curr_word}{highlight_style}")
-                else:
-                    self.output_list.append(curr_word)
-            self.output_list[-1] += "\n"
-
-        def _insert_date(self, file_name):
-            file_date_begin = file_name.index("2")
-            file_date_end = file_name.index(".txt")
-            year, month, day = file_name[file_date_begin : file_date_end].split("-")
-            date_style = "*"
-            self.output_list.append(f"{date_style}Date: {day}.{month}.{year}{date_style}\n")
-
-        def get_random_day(self):
-            return open(pjoin(self.path, random.choice(self.files)), encoding="utf-8").read()
-
     if str(message.author)[:str(message.author).find("#")] != 'Yelov':
         await my_send(message, "Ain't your journal bro")
         return
@@ -987,17 +865,18 @@ async def journal(message, *, action=None):
     jour = Journal()
 
     if action is None:
-        help_l = []
-        help_l.append("-f {word} -> finds {word}")
-        help_l.append("-c {word} -> number of {word} occurences")
-        help_l.append("-r -> random day")
+        help_l = [
+            '-f {word} -> finds {word}',
+            '-c {word} -> number of {word} occurences',
+            '-r -> random day',
+        ]
         await my_send(message, "\n".join(help_l))
         return
 
     if action[:2] not in ("-f", "-c", "-r"):
         await my_send(message, "Incorrect syntax")
         return
-    
+
     do = action.split()[0]
     inp = " ".join(action.split()[1:]) if action != "-r" else ""
     if do == "-f":
@@ -1115,105 +994,7 @@ async def joinvc(message):
 
 @client.command(pass_context=True)
 async def play(message, *, url):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'noplaylist': True,
-        'outtmpl': f'{folders_path}/send/ytdl.mp3',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-    }
-
-    def parse_search(url, volume=100):
-        '''Parses search for YouTube, returns YouTube link'''
-        def download(search):
-            custom_search = VideosSearch(search, limit=1)
-            link = custom_search.result()['result'][0]['link']
-            title = custom_search.result()['result'][0]['title']
-            return (link, title)
-
-        if url.split()[-1][:4] == 'vol=':
-            num = url.split()[-1][4:]
-            try:
-                volume = int(num)
-            except:
-                print("Invalid volume")
-            if volume < 0 or volume > 100:
-                print('Stupid volume, setting to 100%')
-                volume = 100
-            url = url[:-1]
-
-        with YoutubeDL(ydl_opts) as ydl:  # todo co za playlist a od koho hra
-            if url[:24] == 'https://www.youtube.com/':
-                link = url
-                ydl.download([url])
-                title = Video.get(url)['title']
-            elif url[:34] == 'https://open.spotify.com/playlist/':
-                auth_manager = SpotifyClientCredentials(
-                    'bf8f3c6a05c249fcadb039311742fd07', 'e16b16e950974ddd9175976b16be3671')
-                sp = Spotify(auth_manager=auth_manager)
-                result = sp.playlist_items(url, additional_types=['track'])
-                tracks = result['items']
-
-                while result['next']:
-                    result = sp.next(result)
-                    tracks.extend(result['items'])
-
-                track_info = []
-                tracks.reverse()
-
-                for item in tracks:
-                    artist = item['track']['artists'][0]['name']
-                    title = item['track']['name']
-                    song_queue.append(artist + " " + title)
-                    track_info.append((artist, title))
-
-                artist, title = track_info.pop(0)
-                song_queue.pop(0)
-                link, title = download(artist + " " + title)
-            elif url[:31] == 'https://open.spotify.com/track/':
-                spotify_credentials = SpotifyClientCredentials(
-                    client_id=keys["spotify-id"], client_secret=keys["spotify-secret"])
-                sp = Spotify(auth_manager=spotify_credentials)
-                song = sp.track(url)
-                artist = song['artists'][0]['name']
-                title = song['name']
-                link, title = download(artist + " " + title)
-            else:
-                link, title = download(url)
-
-        return link, title, volume
-
-    def queue(voice):
-        global song_queue
-        if len(song_queue) != 0:
-            play_url(song_queue.pop(0), voice)
-
-    def play_url(url, voice):
-        global current_song
-
-        if os.path.isfile(pjoin("folders", "send", "song.mp3")):
-            try:
-                os.remove(pjoin("folders", "send", "song.mp3"))
-            except:
-                pass
-
-        link, title, volume = parse_search(url)
-        current_song = title
-
-        with YoutubeDL(ydl_opts) as ydl:
-            print("Downloading", title)
-            ydl.download([link])
-        for file in os.listdir(pjoin("folders", ".", "send")):
-            if file.startswith('ytdl'):
-                os.rename(pjoin("folders", "send", file), pjoin("folders", "send", "song.mp3"))
-        voice.play(discord.FFmpegPCMAudio(pjoin("folders", "send", "song.mp3")), after=lambda e: queue(voice))
-        voice.source = discord.PCMVolumeTransformer(voice.source, volume=float(volume)/100)
-        return link, title
-
-    global song_queue
+    # get voice start
     voice_channel = message.author.voice.channel
     if voice_channel is None:
         await my_send(message, "You ain't connected dawg")
@@ -1223,15 +1004,21 @@ async def play(message, *, url):
         await voice_channel.connect()
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
 
+    songs_added = music_play.parse_search(url)
     if voice.is_playing() or voice.is_paused():
-        title = parse_search(url)[1]
-        song_queue.append(title)
-        await my_send(message, "Added to queue")
+        if len(songs_added) == 1:
+            added_title = songs_added[0][1]
+        else:
+            added_title = f"{len(songs_added)} songs"
+        await my_send(message, f"Added **{added_title}** to queue")   # todo wrong if multiple added from playlist
         return
-
-    link, title = play_url(url, voice)
-
-    await my_send(message, f"Playing **{title}**\n{link}\nCommands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave")
+    music_play.download_and_play_next(voice)
+    send_list = [
+        f"Playing **{music_play.title}**",
+        music_play.link,
+        'Commands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave',
+    ]
+    await my_send(message, "\n".join(send_list))
 
 
 # @slash.slash(description="Plays an audio file in voice chat")
@@ -1241,8 +1028,8 @@ async def playfile(ctx, *, url):
 
     try:
         await voice_channel.connect()
-    except:
-        pass
+    except Exception as e:
+        print(e)
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
 
     if os.path.isfile(url) and (voice.is_playing() or voice.is_paused()):
@@ -1288,45 +1075,42 @@ async def resume(ctx):
         await my_send(ctx, "Not connected")
     elif voice.is_paused():
         voice.resume()
-        await my_send(ctx, f"Resumed - **{current_song}**")
+        await my_send(ctx, f"Resumed - **{music_play.current_title()}**")
     else:
         await my_send(ctx, "Shit's not paused yo")
 
 # # @slash.slash(description="Skips song")
 @client.command(pass_context=True)
-async def skip(ctx, num=1):
-    global song_queue
+async def skip(ctx, skip_num=1):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-    if not voice:
-        await my_send(ctx, "Not connected")
-    elif len(song_queue) > 0:
-        voice.stop()
-        if num > 1:
-            song_queue = song_queue[num-1:]
-        await my_send(ctx, f"Now playing **{song_queue[0]}**")
-    else:
-        await my_send(ctx, "The queue is empty")
+    if skip_num.isnumeric() and int(skip_num) > 1:
+        music_play.song_queue = music_play.song_queue[skip_num-1:]
+    next_song = music_play.next_song()
+    voice.stop()
+    if next_song is None:
+        await my_send(ctx, "The end of queue")
+        return
+    send_list = [
+        f"Playing **{next_song[1]}**",
+        next_song[0],
+        'Commands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave',
+    ]
+    await my_send(ctx, "\n".join(send_list))
+
 
 # # @slash.slash(description="Prints song queue")
 
 
 @client.command(pass_context=True)
 async def queue(ctx):
-    if not len(song_queue):
-        await my_send(ctx, "The queue is empty")
-        return
-    res = ''.join(f'**{i+1}.** {song}\n' for i, song in enumerate(song_queue[:10]))
-    if len(song_queue) > 10:
-        res += f"**.. and {len(song_queue)-10} other songs**"
-    await my_send(ctx, "**Current queue:**\n" + res)
+    await my_send(ctx, music_play.show_queue())
 
 # # @slash.slash(description="Clears song queue")
 
 
 @client.command(pass_context=True)
 async def clearqueue(ctx):
-    global song_queue
-    song_queue = []
+    music_play.clear_queue()
     await my_send(ctx, "Song queue cleared")
 
 # # @slash.slash(description="Stops music")
@@ -1334,13 +1118,12 @@ async def clearqueue(ctx):
 
 @client.command(pass_context=True)
 async def stop(ctx):
-    global song_queue
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
         await my_send(ctx, "Not connected")
     elif voice.is_playing():
+        music_play.clear_queue()
         voice.stop()
-        song_queue = []
         await my_send(ctx, "Stopped")
     else:
         await my_send(ctx, "Music isn't playing")
@@ -1353,8 +1136,10 @@ async def volume(ctx, *, volume):
     voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
     if not voice:
         await my_send(ctx, "Not connected")
-    elif 0 <= int(volume) <= 100:
+    elif volume.isnumeric() and 0 <= int(volume) <= 100:
         voice.source.volume = float(volume) / 100
+    else:
+        await my_send(ctx, "Volume must be between <0, 100>")
 
 # # @slash.slash(description="Prints current volume")
 
@@ -1388,7 +1173,7 @@ async def maths(ctx, *, action):
             f.write(str(num))
         return num
 
-    with open(pjoin("folders", "text", "number.txt"), 'r') as f:
+    with open(pjoin("folders", "text", "number.txt")) as f:
         num = Decimal(f.read())
         orig = num
 
@@ -1584,7 +1369,7 @@ async def findword(ctx, where, part):
         await my_send(ctx, "Need to specify with begins/ends")
         return
     output = []
-    with open(pjoin("folders", "text", "words_alpha.txt"), 'r') as f:
+    with open(pjoin("folders", "text", "words_alpha.txt")) as f:
         for line in f:
             line = line[:-1]
             if where == 'begins':
