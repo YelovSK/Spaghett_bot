@@ -1,17 +1,16 @@
 import json
 import os
 import disnake
+import time
 
 from message_send import bot_send
 from disnake.ext import commands
 from disnake.ext.commands import Context
 from os.path import join as pjoin
-
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials
 from yt_dlp import YoutubeDL
 from youtubesearchpython import Video, VideosSearch
-import time
 
 with open("config.json") as file:
     config = json.load(file)
@@ -154,7 +153,6 @@ class Music(commands.Cog, name="music"):
 
     @commands.command()
     async def play(self, ctx: Context, *, url):
-        # get voice start
         if not self.voice:
             self.voice = await ctx.author.voice.channel.connect()
 
@@ -164,7 +162,7 @@ class Music(commands.Cog, name="music"):
                 added_title = songs_added[0][1]
             else:
                 added_title = f"{len(songs_added)} songs"
-            await bot_send(ctx, f"Added **{added_title}** to queue")   # todo wrong if multiple added from playlist
+            await bot_send(ctx, f"Added **{added_title}** to queue")
             return
         self.music_play.download_and_play_next(self.voice)
         send_list = [
@@ -195,9 +193,7 @@ class Music(commands.Cog, name="music"):
 
     @commands.command()
     async def leave(self, ctx: Context):
-        if not self.voice:
-            await bot_send(ctx, "Not connected")
-        elif self.voice.is_connected():
+        if self.voice and self.voice.is_connected():
             await self.voice.disconnect()
             await bot_send(ctx, "Disconnected")
         else:
@@ -206,9 +202,7 @@ class Music(commands.Cog, name="music"):
 
     @commands.command()
     async def pause(self, ctx: Context):
-        if not self.voice:
-            await bot_send(ctx, "Not connected")
-        elif self.voice.is_playing():
+        if self.voice and self.voice.is_playing():
             self.voice.pause()
             await bot_send(ctx, "Paused")
         else:
@@ -217,9 +211,7 @@ class Music(commands.Cog, name="music"):
 
     @commands.command()
     async def resume(self, ctx: Context):
-        if not self.voice:
-            await bot_send(ctx, "Not connected")
-        elif self.voice.is_paused():
+        if self.voice and self.voice.is_paused():
             self.voice.resume()
             await bot_send(ctx, f"Resumed - **{self.music_play.current_title()}**")
         else:
@@ -256,9 +248,7 @@ class Music(commands.Cog, name="music"):
 
     @commands.command()
     async def stop(self, ctx: Context):
-        if not self.voice:
-            await bot_send(ctx, "Not connected")
-        elif self.voice.is_playing():
+        if self.voice and self.voice.is_playing():
             self.music_play.clear_queue()
             self.voice.stop()
             await bot_send(ctx, "Stopped")

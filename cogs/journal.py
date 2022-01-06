@@ -9,7 +9,6 @@ from message_send import bot_send
 from disnake.ext import commands
 from disnake.ext.commands import Context
 from os.path import join as pjoin
-
 from collections import Counter
 from pathlib import Path
 

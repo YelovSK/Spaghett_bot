@@ -1,6 +1,5 @@
 import disnake
 import random
-import os
 import math
 import json
 import sys
