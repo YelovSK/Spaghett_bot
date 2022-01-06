@@ -5,16 +5,12 @@ import disnake
 
 from datetime import datetime
 from disnake import ApplicationCommandInteraction
-from disnake.ext import tasks, commands
 from disnake.ext.commands import Bot
 from message_send import bot_send
 
 
-with open("config.json") as file:
-    config = json.load(file)
-
-intents = disnake.Intents.default()
-bot = Bot(command_prefix=config["prefix"], intents=intents)
+config = json.load(open("config.json"))
+bot = Bot(command_prefix=config["prefix"])
 
 @bot.event
 async def on_ready():

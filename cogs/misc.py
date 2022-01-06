@@ -158,7 +158,7 @@ class Misc(commands.Cog):
     @commands.command()
     async def dict(self, ctx: Context, *, word_do=''):
         if len(word_do.split()) != 2:
-            await bot_send(message, 'What word am I supposed to find dumbo')
+            await bot_send(ctx, 'What word am I supposed to find dumbo')
             return
 
         word, do = word_do.split()
@@ -177,13 +177,13 @@ class Misc(commands.Cog):
             else:
                 words = dictionary.antonym(word)
             if not words:
-                await bot_send(message, "Didn't find any words")
+                await bot_send(ctx, "Didn't find any words")
                 return
             output += f'**{do.capitalize()} of {word}:** '
             for word in words:
                 output += f'{word}, '
             output = output[:-2]
-        await bot_send(message, output)
+        await bot_send(ctx, output)
         
     @commands.command()
     async def weather(self, ctx: Context, *, specify=''):
@@ -223,7 +223,9 @@ class Misc(commands.Cog):
                         comments[current].append(line[:-1])
                     else:
                         comments[current] = [line[:-1]]
-            info['temperature'] += f' (*{random.choice(comments[math.floor(temp)])}*)'
+            temp_rounded = math.floor(temp)
+            if temp_rounded in comments:
+                info['temperature'] += f' (*{random.choice(comments[temp_rounded])}*)'
 
         def utc_to_local(utc_dt):
             return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None).strftime('%X')
