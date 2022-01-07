@@ -68,36 +68,28 @@ class Music(commands.Cog):
     async def replace_song(self):
         await self.delete_curr_file()
         os.rename(pjoin("folders", "send", "ytdl.mp3"), pjoin("folders", "send", "song.mp3"))
-
-    async def parse_search(self, text):
-        if text.split()[-1][:4] == 'vol=':
-            num = text.split()[-1][4:]
-            if num.isnumeric() and 0 <= int(num) <= 100:
-                self.volume = int(num)
-            text = text[:-1]
+        
+    async def add_to_queue(self, text: str):
         orig_queue_len = len(self.song_queue)
-        if 'https://www.youtube.com/' in text:
+        await self.parse_search(text)
+        return self.song_queue[orig_queue_len:]
+
+    async def parse_search(self, text: str):
+        if text.startswith('https://www.youtube.com/'):
             link = text
             title = Video.get(text)['title']
             self.song_queue.append((link, title))
-        elif 'https://open.spotify.com/playlist/' in text:
+        elif text.startswith('https://open.spotify.com/playlist/'):
             await self.add_songs_from_playlist(text)
-        elif 'https://open.spotify.com/track/' in text:
+        elif text.startswith('https://open.spotify.com/track/'):
             song = self.sp.track(text)
             artist = song['artists'][0]['name']
             title = song['name']
             await self.search_song(artist + " " + title)
         else:
             await self.search_song(text)
-        
-        new_queue_len = len(self.song_queue) - orig_queue_len
-        if new_queue_len == 1:
-            return [self.song_queue[-1], ]
-        if new_queue_len > 1:
-            return self.song_queue[1:]
-        return []
 
-    async def add_songs_from_playlist(self, link):
+    async def add_songs_from_playlist(self, link: str):
         result = self.sp.playlist_items(link, additional_types=['track'])
         tracks = result['items']
         while result['next']:
@@ -110,7 +102,7 @@ class Music(commands.Cog):
             title = item['track']['name']
             await self.search_song(artist + " " + title)
 
-    async def search_song(self, search):
+    async def search_song(self, search: str):
         custom_search = VideosSearch(search, limit=1)
         result = custom_search.result()['result'][0]
         self.song_queue.append((result['link'], result['title']))
@@ -147,7 +139,7 @@ class Music(commands.Cog):
         await bot_send(ctx, "Song queue cleared")
 
     @commands.command()
-    async def play(self, ctx: Context, *, url):
+    async def play(self, ctx: Context, *, url: str):
         """Plays or queues a song.
 
         Syntax: ```plz play <search / spotify_track_link / spotify_playlist_link / youtube_link>```
@@ -155,7 +147,7 @@ class Music(commands.Cog):
         """
         self.ctx = ctx
         await self.connect_voice()
-        songs_added = await self.parse_search(url)
+        songs_added = await self.add_to_queue(url)
         if self.voice.is_playing() or self.voice.is_paused():
             if len(songs_added) == 1:
                 added_title = songs_added[0][1]
@@ -166,7 +158,7 @@ class Music(commands.Cog):
         await self.download_and_play_next()
 
     @commands.command()
-    async def playfile(self, ctx: Context, *, url):
+    async def playfile(self, ctx: Context, *, url: str):
         """Plays a local audio file.
 
         Syntax: ```plz playfile <path>```
@@ -274,7 +266,7 @@ class Music(commands.Cog):
             await bot_send(ctx, "Music isn't playing")
 
     @commands.command()
-    async def volume(self, ctx: Context, *, volume):
+    async def volume(self, ctx: Context, *, volume: str):
         """Sets the volume.
 
         Syntax: ```plz volume <volume>```
