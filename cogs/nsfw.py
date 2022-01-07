@@ -13,6 +13,9 @@ from PIL import Image
 
 
 class NSFW(commands.Cog):
+    """lewd uwu"""
+
+    COG_EMOJI = "😋"
 
     def __init__(self, bot):
         self.bot = bot
@@ -20,6 +23,11 @@ class NSFW(commands.Cog):
 
     @commands.command()
     async def fap(self, ctx: Context, *, folder=''):
+        """Sends a fap image. Random folder or specified [folder].
+
+        Syntax: ```plz fap [folder]```
+        Example: ```plz fap Asuka```
+        """
         if not folder:
             folders = open(pjoin("folders", "text", "fap.txt")).read().splitlines()
             folder = random.choice(folders)
@@ -37,6 +45,11 @@ class NSFW(commands.Cog):
 
     @commands.command()
     async def kawaii(self, ctx: Context, do=''):
+        """Sends a kawaii image. Send with 'cum' to send every 4h or [image_name].
+
+        Syntax: ```plz kawaii ["cum" / image_name]```
+        Example: ```plz kawaii``` ```plz kawaii cum``` ```plz kawaii 1bunt.jpg```
+        """
         channel = ctx.channel
         if do == 'cum':
             channel = self.bot.get_channel(680494725165219958)
@@ -72,8 +85,12 @@ class NSFW(commands.Cog):
             
     @commands.command()
     async def reddit(self, ctx: Context, sub, text=None):
-        with open(pjoin("folders", "text", "reddit.txt")) as f:
-            data = [line[:-1] for line in f]
+        """Sends a Reddit post from subreddit.
+
+        Syntax: ```plz reddit <subreddit> ["text"]```
+        Example: ```plz reddit 2meirl4meirl``` ```plz reddit askreddit text```
+        """
+        data = open(pjoin("folders", "text", "reddit.txt")).read().splitlines()
 
         reddit = praw.Reddit(client_id=data.pop(),
                             client_secret=data.pop(),
@@ -111,6 +128,10 @@ class NSFW(commands.Cog):
             
     @commands.command()
     async def coomer(self, ctx: Context):
+        """Sends an image from a random lewd subreddit.
+
+        Syntax: ```plz coomer```
+        """
         channel = ctx.channel
         chose = random.choice(["petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
                             "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",

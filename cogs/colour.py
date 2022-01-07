@@ -9,6 +9,9 @@ from PIL import Image
 
 
 class Colour(commands.Cog):
+    """send and name colours"""
+
+    COG_EMOJI = "🟣"
 
     def __init__(self, bot):
         self.bot = bot
@@ -17,6 +20,10 @@ class Colour(commands.Cog):
 
     @commands.command()
     async def colour(self, ctx: Context):
+        """Sends an image of a random colour.
+
+        Syntax: ```plz colour```
+        """
         r, g, b = random.randrange(256), random.randrange(256), random.randrange(256)
         file_path = pjoin("folders", "send", "colour.jpg")
         Image.new('RGB', (400, 400), (r, g, b)).save(file_path)
@@ -26,6 +33,11 @@ class Colour(commands.Cog):
 
     @commands.command()
     async def namecolour(self, ctx: Context, *, name):
+        """Names the last generated colour.
+
+        Syntax: ```plz namecolour <name>```
+        Example: ```plz namecolour Shiny Boi```
+        """
         if self.curr_colour is None:
             await bot_send(ctx, "No colour was generated")
             return
@@ -36,6 +48,10 @@ class Colour(commands.Cog):
 
     @commands.command()
     async def colourlist(self, ctx: Context):
+        """Lists the names of all named colours.
+
+        Syntax: ```plz colourlist```
+        """
         with open(pjoin("folders", "text", "colours.txt")) as f:
             arr = [line[line.find(':')+2: -1] for line in f]
         send = ''.join(f'{prvok}\n' for prvok in arr)
@@ -44,6 +60,11 @@ class Colour(commands.Cog):
 
     @commands.command()
     async def showcolour(self, ctx: Context, *, name):
+        """Shows a colour with the given name.
+
+        Syntax: ```plz showcolour <name>```
+        Example: ```plz showcolour literally piss```
+        """
         for line in open(pjoin("folders", "text", "colours.txt")).read().splitlines():
             rgb, curr_name = line.split(" : ")
             if curr_name == name:

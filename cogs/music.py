@@ -18,6 +18,9 @@ with open("config.json") as file:
     config = json.load(file)
 
 class Music(commands.Cog):
+    """playing songs in VC"""
+    
+    COG_EMOJI = "🎧"
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -76,7 +79,7 @@ class Music(commands.Cog):
         if 'https://www.youtube.com/' in text:
             link = text
             title = Video.get(text)['title']
-            await self.song_queue.append((link, title))
+            self.song_queue.append((link, title))
         elif 'https://open.spotify.com/playlist/' in text:
             await self.add_songs_from_playlist(text)
         elif 'https://open.spotify.com/track/' in text:
@@ -136,11 +139,20 @@ class Music(commands.Cog):
 
     @commands.command()
     async def clearqueue(self, ctx: Context):
+        """Clears the song queue.
+
+        Syntax: ```plz clearqueue```
+        """
         self.song_queue = []
         await bot_send(ctx, "Song queue cleared")
 
     @commands.command()
     async def play(self, ctx: Context, *, url):
+        """Plays or queues a song.
+
+        Syntax: ```plz play <search / spotify_track_link / spotify_playlist_link / youtube_link>```
+        Example: ```plz play Rei I``` ```plz play https://www.youtube.com/watch?v=dQw4w9WgXcQ```
+        """
         self.ctx = ctx
         await self.connect_voice()
         songs_added = await self.parse_search(url)
@@ -155,6 +167,11 @@ class Music(commands.Cog):
 
     @commands.command()
     async def playfile(self, ctx: Context, *, url):
+        """Plays a local audio file.
+
+        Syntax: ```plz playfile <path>```
+        Example: ```plz playfile C:\YoMama.mp3```
+        """
         if not self.voice:
             self.voice = await ctx.author.voice.channel.connect()
 
@@ -167,10 +184,18 @@ class Music(commands.Cog):
 
     @commands.command()
     async def join(self, ctx: Context):
+        """Joins the VC you're currently in.
+
+        Syntax: ```plz join```
+        """
         self.voice = await ctx.author.voice.channel.connect()
 
     @commands.command()
     async def leave(self, ctx: Context):
+        """Leaves VC.
+
+        Syntax: ```plz leave```
+        """
         if self.voice and self.voice.is_connected():
             await self.voice.disconnect()
             await bot_send(ctx, "Disconnected")
@@ -179,6 +204,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def pause(self, ctx: Context):
+        """Pauses the currently playing song.
+
+        Syntax: ```plz pause```
+        """
         if self.voice and self.voice.is_playing():
             self.voice.pause()
             await bot_send(ctx, f"Paused - **{self.title}**")
@@ -187,6 +216,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def resume(self, ctx: Context):
+        """Resumes the current song..
+
+        Syntax: ```plz resume```
+        """
         if self.voice and self.voice.is_paused():
             self.voice.resume()
             await bot_send(ctx, f"Resumed - **{self.title}**")
@@ -195,6 +228,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def skip(self, ctx: Context, skip_num="1"):
+        """Skips the current song.
+
+        Syntax: ```plz skip```
+        """
         if not self.voice:
             await bot_send(ctx, "Not connected")
             return
@@ -206,6 +243,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def queue(self, ctx: Context):
+        """Shows the song queue.
+
+        Syntax: ```plz queue```
+        """
         if not self.song_queue and not self.title:
             await bot_send(ctx, "The queue is empty")
         songs = [
@@ -221,6 +262,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def stop(self, ctx: Context):
+        """Stops playing and clears the queue.
+
+        Syntax: ```plz stop```
+        """
         if self.voice and self.voice.is_playing():
             self.song_queue = []
             self.voice.stop()
@@ -230,6 +275,11 @@ class Music(commands.Cog):
 
     @commands.command()
     async def volume(self, ctx: Context, *, volume):
+        """Sets the volume.
+
+        Syntax: ```plz volume <volume>```
+        Example: ```plz volume 69```
+        """
         if not self.voice:
             await bot_send(ctx, "Not connected")
         elif volume.isnumeric() and 0 <= int(volume) <= 100:
@@ -240,6 +290,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def currentvolume(self, ctx: Context):
+        """Shows the current volume.
+
+        Syntax: ```plz currentvolume```
+        """
         if not self.voice:
             await bot_send(ctx, "Not connected")
         else:
@@ -247,6 +301,10 @@ class Music(commands.Cog):
 
     @commands.command()
     async def maximumpain(self, ctx: Context):
+        """Puts the volume to max.
+
+        Syntax: ```plz maximumpain```
+        """
         if not self.voice:
             await bot_send(ctx, "Not connected")
         else:

@@ -17,7 +17,7 @@ async def on_ready():
     print(f"disnake API version: {disnake.__version__}")
     print(f"Python version: {python_version()}")
     print("-" * 20)
-    await bot.change_presence(activity=disnake.Game("plz help"))
+    await bot.change_presence(activity=disnake.Game("plz help.. not (broken)"))
 
 bot.remove_command("help")
 

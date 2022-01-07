@@ -1,3 +1,4 @@
+from io import StringIO
 import disnake
 import random
 import math
@@ -19,12 +20,20 @@ with open("config.json") as file:
     config = json.load(file)
 
 class Misc(commands.Cog):
+    """idk, random stuff"""
+    
+    COG_EMOJI = "💡"
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @commands.command()
     async def insult(self, ctx: Context, *, ping):
+        """Randomly generated insult. Argument is username, not nick.
+
+        Syntax: ```plz insult <username>```
+        Example: ```plz insult yomama```
+        """
         channel = ctx.channel
         found = False
         curr_user = str(ctx.author)[:str(ctx.author).find("#")]
@@ -64,11 +73,19 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def fuck(self, ctx: Context):
+        """Random swear word.
+
+        Syntax:```plz fuck```
+        """
         words = list(open(pjoin("folders", "text", "swear.txt")))
         await bot_send(ctx, random.choice(words))
 
     @commands.command()
     async def f(self, ctx: Context):
+        """Random sad/angry message.
+
+        Syntax: ```plz f```
+        """
         with open(pjoin("folders", "text", "f.txt")) as f:
             order = f.read().splitlines()
 
@@ -83,11 +100,20 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def addf(self, ctx: Context, *, string):
+        """Adds message to the f list (when using plz f).
+
+        Syntax: ```plz addf <message>```
+        Example: ```plz addf very many sad :cccc```
+        """
         with open(pjoin("folders", "text", "f.txt"), 'a') as file:
             file.write(f'{string}\n')
 
     @commands.command()
     async def a(self, ctx: Context):
+        """Prints 4-20 A-s. Keeps track of stats with plz staats.
+
+        Syntax: ```plz a```
+        """
         auth = str(ctx.author)[:str(ctx.author).find('#')]
         # if auth != "Yelov":
         #     await mySend(message, 'no')
@@ -125,6 +151,11 @@ class Misc(commands.Cog):
                 
     @commands.command()
     async def staats(self, ctx: Context, everyone=''):
+        """Stats for the plz a function. Percetange of full-length A-s. Argument ["all"] for everyone's stats.
+
+        Syntax: ```plz staats ["all"]```
+        Example: ```plz staats all```
+        """
         stats = {}
         channel = ctx.channel
 
@@ -157,6 +188,11 @@ class Misc(commands.Cog):
                 
     @commands.command()
     async def dict(self, ctx: Context, *, word_do=''):
+        """Dictionary.
+
+        Syntax: ```plz dict <word> ["synonyms" / "antonyms" / "define"]```
+        Example: ```plz dict sadness antonyms```
+        """
         if len(word_do.split()) != 2:
             await bot_send(ctx, 'What word am I supposed to find dumbo')
             return
@@ -187,6 +223,11 @@ class Misc(commands.Cog):
         
     @commands.command()
     async def weather(self, ctx: Context, *, specify=''):
+        """Shows weather info.
+
+        Syntax: ```plz weather [info]```
+        Example: ```plz weather temperature``` ```plz weather in Bratislava```
+        """
         owm = OWM(config['owm'])
         mgr = owm.weather_manager()
         info = {}
@@ -243,6 +284,11 @@ class Misc(commands.Cog):
             
     @commands.command()
     async def word(self, ctx: Context, do='', *, word=''):
+        """Local dictionary.
+
+        Syntax: ```plz word ["list" / "define" <word> / "add" <word> : <definition>]```
+        Example: ```plz word define hentai``` ```plz add chinchin : cute stick```
+        """
         dick = {}
         if len(word.split()) > 1:
             word, definition = word.split(':')
@@ -280,6 +326,11 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def findword(self, ctx: Context, where, part):
+        """Finds a word that begins/ends with <word_part>
+
+        Syntax: ```plz findword <"begins"/"ends"> <word_part>```
+        Example: ```plz findword begins holocau```
+        """
         if where not in ("begins", "ends"):
             await bot_send(ctx, "Need to specify with begins/ends")
             return
@@ -300,11 +351,19 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def no(self, ctx: Context):
+        """Sends 30 empty lines (for when you don't want to see something).
+
+        Syntax: ```plz no```
+        """
         out = "‎\n"*30
         await bot_send(ctx, out)
         
     @commands.command()
     async def asdlkj(self, ctx: Context):
+        """Sends 2000 random characters.
+
+        Syntax: ```plz asdlkj```
+        """
         if str(ctx.author)[:str(ctx.author).find('#')] != "Yelov":
             await bot_send(ctx, 'What is asdlkj. Wtf do u want from me. Stop typing random shit on your keyboard.')
             return
@@ -313,6 +372,11 @@ class Misc(commands.Cog):
         
     @commands.command()
     async def answer(self, ctx: Context, *, question):
+        """Magic 8-ball.
+
+        Syntax: ```plz answer <question>```
+        Example: ```plz answer is life worth living?```
+        """
         auth = str(ctx.author)[:str(ctx.author).find("#")]
         yes = ("for sure dawg", "you fucking bet", "you didn't even have to ask",
             "obviously yes", "yeh i would say so", "sadly yah", "+")
@@ -325,6 +389,11 @@ class Misc(commands.Cog):
         
     @commands.command()
     async def cut(self, ctx: Context, *, message):
+        """Splits the mesage into multiple lines.
+
+        Syntax: ```plz cut <text>```
+        Example: ```plz cut good jokes mate real funny see you at FUCK YOUJ```
+        """
         if len(message.split()) == 1:
             await bot_send(ctx, "\n".join(list(message)))
         else:
@@ -332,6 +401,11 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def delete(self, ctx: Context, num=1):
+        """Deletes the last [num] messages. Set [num] to '-1' to delete all messages.
+
+        Syntax: ```plz delete [num]```
+        Example: ```plz delete``` ```plz delete 5```
+        """
         prev_messages = []
         with open(pjoin("folders", "text", "prev_mssg_ids.txt")) as f:
             for line in f.read().splitlines():
@@ -367,6 +441,11 @@ class Misc(commands.Cog):
         
     @commands.command()
     async def guess(self, ctx: Context, *, num):
+        """Higher/lower guessing game. Generated number is from 0 to 10_000.
+
+        Syntax: ```plz guess <num>```
+        Example: ```plz guess 322```
+        """
         channel = ctx.channel
         change = False
         current, guesses = None, None
@@ -412,6 +491,11 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def number(self, ctx: Context, *, num):
+        """Guess a number from 1 to 100.
+
+        Syntax: ```plz number <num>```
+        Example: ```plz number 69```
+        """
         good = []
         bad = []
         with open(pjoin("folders", "text", "num_answers.txt")) as f:
@@ -436,12 +520,20 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def randomword(self, ctx: Context):
+        """Sends a random word from the dictionary.
+
+        Syntax: ```plz randomword```
+        """
         words = open(pjoin("folders", "text", "words_alpha.txt")).read().splitlines()
         await bot_send(ctx, random.choice(words))
         
     @commands.command()
-    async def execute(self, ctx: Context, *, code=''):
+    async def execute(self, ctx: Context, *, code):
+        """Executes a piece of code.
 
+        Syntax: ```plz execute <code>```
+        Example: \n> plz execute\n> \```\n> print('test')\n> \```
+        """
         @contextlib.contextmanager
         def stdoutIO(stdout=None):
             old = sys.stdout
@@ -452,7 +544,7 @@ class Misc(commands.Cog):
             sys.stdout = old
 
         if len(code.split('```')) != 3:
-            await bot_send(ctx, "Write your code like this:\n> plz execute\n> \```\n> print('test')\n> \```")
+            await bot_send(ctx, "Type 'plz help execute' for proper syntax")
             return
         code = code.split('```')[1]
 
@@ -468,21 +560,38 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def badbot(self, ctx: Context):
+        """Don't you dare.
+
+        Syntax: ```plz badbot```
+        """
         string = str(ctx.author)
         string = string[:string.find("#")]
         await bot_send(ctx.channel, f'{string} go commit die')
 
     @commands.command()
     async def goodbot(self, ctx: Context):
+        """Compliments spaghett.
+
+        Syntax: ```plz goodbot```
+        """
         await bot_send(ctx, 'ty')
 
     @commands.command()
     async def me(self, ctx: Context):
+        """Sends your name.
+
+        Syntax: ```plz me```
+        """
         channel = ctx.channel
         await bot_send(channel, ctx.author)
 
     @commands.command()
     async def sorry(self, ctx: Context, name=''):
+        """Sends a heartfelt apology.
+
+        Syntax: ```plz sorry <name>```
+        Example: ```plz sorry Yelov```
+        """
         channel = ctx.channel
         curr_user = str(ctx.author)[:str(ctx.author).find("#")]
         if not name:
@@ -510,6 +619,10 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def epicshit(self, ctx: Context):
+        """Just follow the instructions.
+
+        Syntax: ```plz epicshit```
+        """
         await bot_send(ctx, "Is this shit epic? [yes/no]")
         msg = await self.bot.wait_for('message', check=lambda m: m.author == ctx.author)
         if msg.content == "yes":

@@ -16,6 +16,9 @@ with open("config.json") as file:
     config = json.load(file)
 
 class Journal(commands.Cog):
+    """dw, you can't use it anyway"""
+    
+    COG_EMOJI = "📕"
 
     def __init__(self, bot):
         self.bot = bot
@@ -133,6 +136,14 @@ class Journal(commands.Cog):
     
     @commands.command()
     async def journal(self, ctx: Context, *, action=None):
+        """Searches through journal.
+        -f {word} -> finds {word}
+        -c {word} -> number of {word} occurences
+        -r -> random day
+
+        Syntax: ```plz journal <action> [word]```
+        Example: ```plz journal -f kokot``` ```plz journal -c kokot``` ```plz journal -r```
+        """
         if str(ctx.author)[:str(ctx.author).find("#")] != 'Yelov':
             await bot_send(ctx, "Ain't your journal bro")
             return

@@ -15,6 +15,10 @@ with open("config.json") as file:
 
 
 class AI(commands.Cog):
+    """AI text (and audio) generation"""
+
+    COG_EMOJI = "🤖"
+    
     def __init__(self, bot):
         self.bot = bot
         self.text2speech_model = None
@@ -36,6 +40,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def aigenerate(self, ctx: Context, *, prompt):
+        """Generates text from a prompt.
+
+        Syntax: ```plz aigenerate <prompt>```
+        Example: ```plz aigenerate I wish my dream anime waifu would become real because```
+        """
         await bot_send(ctx, "brb, generating...")
         output = await self.ai(
             "davinci",
@@ -55,6 +64,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def aianswer(self, ctx: Context, *, prompt):
+        """Answers the question.. well, tries to.
+
+        Syntax: ```plz answer <question>```
+        Example: ```plz answer Why am I sad?```
+        """
         if not prompt[0].isupper():
             prompt = prompt[0].capitalize() + prompt[1:]
         output = await self.ai(
@@ -66,6 +80,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def aiad(self, ctx: Context, *, prompt):
+        """Generates an ad based on the description.
+
+        Syntax: ```plz aiad <prompt>```
+        Example: ```plz aiad Do you want to dab on 'em hates? Just get```
+        """
         output = await self.ai(
             "davinci-instruct-beta",
             f"Write a creative ad for the following product:\n\"\"\"\"\"\"\n{prompt}\n\"\"\"\"\"\"\nThis is the ad I wrote aimed at teenage girls:\n\"\"\"\"\"\"",
@@ -75,6 +94,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def aianalogy(self, ctx: Context, *, prompt):
+        """Writes an analogy. Write 'X is like Y'.
+
+        Syntax: ```plz aianalogy <prompt>```
+        Example: ```plz aianalogy Life is like Hitler```
+        """
         output = await self.ai(
             "davinci-instruct-beta",
             f"Ideas are like balloons in that: they need effort to realize their potential.\n\n{prompt} in that:",
@@ -84,6 +108,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def aiengrish(self, ctx: Context, *, prompt):
+        """Translates broken English into proper English.
+
+        Syntax: ```plz aiengrish <text>```
+        Example: ```plz aiengrish u wot m8```
+        """
         output = await self.ai(
             "davinci-instruct-beta",
             f"Original: {prompt}\nStandard American English:",
@@ -93,6 +122,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def aicode(self, ctx: Context, *, prompt):
+        """Generates code based on the description.
+
+        Syntax: ```plz aicode <description>```
+        Example: ```plz aicode Function that returns the sum of all values in the list```
+        """
         output = await self.ai(
             "davinci-codex",
             prompt,
@@ -101,12 +135,17 @@ class AI(commands.Cog):
 
     @commands.command()
     async def huggingface(self, ctx: Context, *, input_text):
-        if not input_text:
-            await bot_send(ctx, "Write 'models' for a list of models\nWrite 'model=<model_name> <input_text>'\nOr just '<input_text>'")
-            return
+        """AI generation with model.
+
+        Syntax: ```plz huggingface <text>``` ```plz huggingface <model_name> <text>```
+        Example: ```plz huggingface Eren is baka cuz```
+        ```plz huggingface model=gpt-neo-2.7B Rei is best girl because```
+        ```plz huggingface models   //lists models```
+        """
         if input_text == "models":
             await bot_send(ctx, "Generatoin:\n1. EleutherAI/gpt-j-6\n2. EleutherAI/gpt-neo-2.7B\n3. microsoft/DialoGPT-large")
             await bot_send(ctx, "Conversation:\n1. microsoft/DialoGPT-large\n2. facebook/blenderbot-3B")
+            return
         model = "EleutherAI/gpt-j-6B"
         if input_text[:len("model=")] == "model=":
             model = input_text.split()[0].split("=")[1]
@@ -125,6 +164,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def j1(self, ctx: Context, *, input_text):
+        """Continues generation from input.
+
+        Syntax: ```plz j1 <input>```
+        Example: ```plz j1 It's hard to think of examples```
+        """
         mssg = await ctx.send("generating, gimme a sec..")
         res = requests.post(
             "https://api.ai21.com/studio/v1/j1-jumbo/complete",
@@ -145,6 +189,11 @@ class AI(commands.Cog):
 
     @commands.command()
     async def text2speech(self, ctx: Context, *, input_text):
+        """Converts text to speech.
+
+        Syntax: ```plz text2speech <text>```
+        Example: ```plz text2speech this voice is sexy```
+        """
         messages = []
         if not self.text2speech_model:
             messages.append(await ctx.send("Loading model..."))

@@ -10,6 +10,9 @@ from os.path import join as pjoin
 
 
 class Media(commands.Cog):
+    """sending images/videos/audio"""
+
+    COG_EMOJI = "🎥"
 
     def __init__(self, bot):
         self.bot = bot
@@ -26,30 +29,58 @@ class Media(commands.Cog):
 
     @commands.command()
     async def AAA(self, ctx: Context):
+        """Sends shinji_scream.mp4.
+
+        Syntax: ```plz AAA```
+        """
         await self.send_video(ctx, "aaa.mp4")
         
     @commands.command()
     async def EEE(self, ctx: Context):
+        """Sends subaru_scream.mp4.
+
+        Syntax: ```plz EEE```
+        """
         await self.send_video(ctx, "EEE.mp4")
         
     @commands.command()
     async def AAAEEE(self, ctx: Context):
+        """Sends EoE_ptsd.mp4.
+
+        Syntax: ```plz AAAEEE```
+        """
         await self.send_video(ctx, "AAAEEE.mp4")
         
     @commands.command()
     async def whOMEGALUL(self, ctx: Context):
+        """Sends a random video making fun of Rem disappearing.
+
+        Syntax: ```plz whOMEGALUL```
+        """
         await self.send_video(ctx, "who" + str(random.randint(1, 4)) + ".mp4")
         
     @commands.command()
     async def deth(self, ctx: Context):
+        """Sends Komm Susser Tod..
+
+        Syntax: ```plz deth```
+        """
         await self.send_file(ctx, "tod.mp3")
         
     @commands.command()
     async def aeoo(self, ctx: Context):
+        """Sends Sends a spook sound from Re:Zero.
+
+        Syntax: ```plz aeoo```
+        """
         await self.send_file(ctx, "aeoo.mp3")
         
     @commands.command()
     async def meme(self, ctx: Context):
+        """Sends a random meme.
+
+        Syntax: ```plz meme```
+        """
         path = pjoin("folders", "memes")
         files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f))]
         choice = random.choice(files)
@@ -63,6 +94,11 @@ class Media(commands.Cog):
         
     @commands.command()
     async def image(self, ctx: Context, img_name='', *, text=''):
+        """Puts text on an image. Lists images if no argument.
+
+        Syntax: ```plz image [image] [text]```
+        Example: ```plz image //lists images``` ```plz image adolf haha funny hitler```
+        """
         if not img_name:
             path = pjoin("folders", "imgs")
             files = [f[:-4] for f in os.listdir(path) if os.path.isfile(pjoin(path, f))]
@@ -101,6 +137,11 @@ class Media(commands.Cog):
         
     @commands.command()
     async def video(self, ctx: Context, *, video=''):
+        """Sends a video. Send with no argument for list of videos.
+
+        Syntax: ```plz video [video_name]```
+        Examples: ```plz video //lists videos``` ```plz video AAA```
+        """
         videos = [f for f in os.listdir(self.videos_path) if f.endswith(".mp4")]
 
         if not video:
@@ -115,9 +156,10 @@ class Media(commands.Cog):
             
     @commands.command()
     async def text(self, ctx: Context, filename=''):
-        if not filename:
-            await bot_send(ctx, 'specify file name')
-            return
+        """Sends a text file.
+
+        Syntax: ```plz text <filename>```
+        """
         await bot_send(ctx, "".join(open(pjoin("folders", "text", f"{filename}.txt")).readlines()))
 
 
