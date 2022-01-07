@@ -1,10 +1,9 @@
 import json
-import os
-import platform
 import disnake
 
+from platform import python_version
+from os import listdir
 from datetime import datetime
-from disnake import ApplicationCommandInteraction
 from disnake.ext.commands import Bot
 from message_send import bot_send
 
@@ -16,7 +15,7 @@ bot = Bot(command_prefix=config["prefix"])
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
     print(f"disnake API version: {disnake.__version__}")
-    print(f"Python version: {platform.python_version()}")
+    print(f"Python version: {python_version()}")
     print("-" * 20)
     await bot.change_presence(activity=disnake.Game("plz help"))
 
@@ -33,7 +32,7 @@ async def on_message(message: disnake.Message):
 
 
 @bot.event
-async def on_slash_command(interaction: ApplicationCommandInteraction):
+async def on_slash_command(interaction: disnake.ApplicationCommandInteraction):
     curr_time = datetime.now().strftime("%H:%M:%S")
     print(f"Executed {interaction.data.name} by {interaction.author} at {curr_time}")
 
@@ -43,10 +42,14 @@ async def on_command_completion(ctx):
     command = ctx.command.qualified_name.split()[0]
     curr_time = datetime.now().strftime("%H:%M:%S")
     print(f"Executed {command} by {ctx.message.author} at {curr_time}")
+    
+
+def load_extensions():
+    for file in [f[:-3] for f in listdir("./cogs") if f.endswith(".py")]:
+        bot.load_extension(f"cogs.{file}")
+        print(f"Loaded {file}")
 
 
 if __name__ == "__main__":
-    for file in [f[:-3] for f in os.listdir("./cogs") if f.endswith(".py")]:
-        bot.load_extension(f"cogs.{file}")
-        print(f"Loaded {file}")
+    load_extensions()
     bot.run(config["token"])

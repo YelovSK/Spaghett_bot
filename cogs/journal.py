@@ -15,9 +15,10 @@ from pathlib import Path
 with open("config.json") as file:
     config = json.load(file)
 
-class Journal:
+class Journal(commands.Cog):
 
-    def __init__(self):
+    def __init__(self, bot):
+        self.bot = bot
         self.base = pjoin("folders", "Journal format")
         self.path = pjoin(self.base, "Diarium")
         self.files = list(os.listdir(self.path))
@@ -129,13 +130,7 @@ class Journal:
 
     def get_random_day(self):
         return open(pjoin(self.path, random.choice(self.files)), encoding="utf-8").read()
-
-
-class JournalFind(commands.Cog, name="journal"):
-    def __init__(self, bot):
-        self.bot = bot
-
-
+    
     @commands.command()
     async def journal(self, ctx: Context, *, action=None):
         if str(ctx.author)[:str(ctx.author).find("#")] != 'Yelov':
@@ -143,7 +138,6 @@ class JournalFind(commands.Cog, name="journal"):
             return
 
         journal_text = ""
-        jour = Journal()
 
         if action is None:
             help_l = [
@@ -161,15 +155,16 @@ class JournalFind(commands.Cog, name="journal"):
         do = action.split()[0]
         inp = " ".join(action.split()[1:]) if action != "-r" else ""
         if do == "-f":
-            jour.find_word_in_journal(inp)
-            journal_text += " ".join(jour.output_list)
+            self.find_word_in_journal(inp)
+            journal_text += " ".join(self.output_list)
         elif do == "-c":
-            jour.find_word_in_journal(inp)
-            journal_text += f'The word **{inp}** was found {jour.occurences} times'
+            self.find_word_in_journal(inp)
+            journal_text += f'The word **{inp}** was found {self.occurences} times'
         elif do == "-r":
-            journal_text += "**RANDOM ENTRY:**\n\n" + jour.get_random_day()
+            journal_text += "**RANDOM ENTRY:**\n\n" + self.get_random_day()
 
         await bot_send(ctx, journal_text)
 
+
 def setup(bot):
-    bot.add_cog(JournalFind(bot))
+    bot.add_cog(Journal(bot))

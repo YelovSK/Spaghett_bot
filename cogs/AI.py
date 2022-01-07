@@ -14,7 +14,7 @@ with open("config.json") as file:
     config = json.load(file)
 
 
-class AI(commands.Cog, name="AI"):
+class AI(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.text2speech_model = None

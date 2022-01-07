@@ -8,7 +8,7 @@ from os.path import join as pjoin
 from PIL import Image
 
 
-class Colour(commands.Cog, name="colour"):
+class Colour(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
