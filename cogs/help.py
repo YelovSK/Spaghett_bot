@@ -34,7 +34,7 @@ class HelpView(disnake.ui.View):
 
 class MyHelpCommand(commands.MinimalHelpCommand):
     def get_command_signature(self, command):
-        return f"{self.context.clean_prefix}{command.qualified_name} {command.signature}"
+        return f"{command.qualified_name} {command.signature}"
 
     async def _cog_select_options(self) -> list[disnake.SelectOption]:
         options: list[disnake.SelectOption] = [
@@ -86,14 +86,14 @@ class MyHelpCommand(commands.MinimalHelpCommand):
                 cog_label = f"{emoji} {name}" if emoji else name
                 # \u2002 is an en-space
                 cmd_list = "\u2002".join(
-                    f"`{self.context.clean_prefix}{cmd.name}`" for cmd in filtered
+                    f"`{cmd.name}`" for cmd in filtered
                 )
                 value = (
                     f"{cog.description}\n{cmd_list}"
                     if cog and cog.description
                     else cmd_list
                 )
-                embed.add_field(name=cog_label, value=value)
+                embed.add_field(name=cog_label, value=value, inline=False)
         return embed
 
     async def bot_help_embed(self, mapping: dict) -> Embed:
