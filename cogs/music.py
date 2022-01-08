@@ -17,9 +17,10 @@ from youtubesearchpython import Video, VideosSearch
 with open("config.json") as file:
     config = json.load(file)
 
+
 class Music(commands.Cog):
     """playing songs in VC"""
-    
+
     COG_EMOJI = "🎧"
 
     def __init__(self, bot: Bot):
@@ -31,18 +32,19 @@ class Music(commands.Cog):
         self.song_queue = []
         self.volume = 100
         self.ydl_opts = {
-            'format': 'bestaudio/best',
-            'noplaylist': True,
-            'outtmpl': pjoin("folders", "send", "ytdl.mp3"),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
+            "format": "bestaudio/best",
+            "noplaylist": True,
+            "outtmpl": pjoin("folders", "send", "ytdl.mp3"),
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "192",
+                }
+            ],
         }
         spotify_credentials = SpotifyClientCredentials(
-            client_id=config["spotify-id"],
-            client_secret=config["spotify-secret"]
+            client_id=config["spotify-id"], client_secret=config["spotify-secret"]
         )
         self.sp = Spotify(auth_manager=spotify_credentials)
 
@@ -55,7 +57,7 @@ class Music(commands.Cog):
         await self.download_song()
         if self.voice.is_playing():
             self.voice.stop()
-            time.sleep(1)   # file is still being used by voice
+            time.sleep(1)  # file is still being used by voice
         await self.replace_song()
         await self.start_playing()
 
@@ -68,44 +70,44 @@ class Music(commands.Cog):
     async def replace_song(self):
         await self.delete_curr_file()
         os.rename(pjoin("folders", "send", "ytdl.mp3"), pjoin("folders", "send", "song.mp3"))
-        
+
     async def add_to_queue(self, text: str):
         orig_queue_len = len(self.song_queue)
         await self.parse_search(text)
         return self.song_queue[orig_queue_len:]
 
     async def parse_search(self, text: str):
-        if text.startswith('https://www.youtube.com/'):
+        if text.startswith("https://www.youtube.com/"):
             link = text
-            title = Video.get(text)['title']
+            title = Video.get(text)["title"]
             self.song_queue.append((link, title))
-        elif text.startswith('https://open.spotify.com/playlist/'):
+        elif text.startswith("https://open.spotify.com/playlist/"):
             await self.add_songs_from_playlist(text)
-        elif text.startswith('https://open.spotify.com/track/'):
+        elif text.startswith("https://open.spotify.com/track/"):
             song = self.sp.track(text)
-            artist = song['artists'][0]['name']
-            title = song['name']
+            artist = song["artists"][0]["name"]
+            title = song["name"]
             await self.search_song(artist + " " + title)
         else:
             await self.search_song(text)
 
     async def add_songs_from_playlist(self, link: str):
-        result = self.sp.playlist_items(link, additional_types=['track'])
-        tracks = result['items']
-        while result['next']:
+        result = self.sp.playlist_items(link, additional_types=["track"])
+        tracks = result["items"]
+        while result["next"]:
             result = self.sp.next(result)
-            tracks.extend(result['items'])
+            tracks.extend(result["items"])
         tracks.reverse()
         await bot_send(self.ctx, f"Adding **{len(tracks)} songs** to queue")
         for item in tracks:
-            artist = item['track']['artists'][0]['name']
-            title = item['track']['name']
+            artist = item["track"]["artists"][0]["name"]
+            title = item["track"]["name"]
             await self.search_song(artist + " " + title)
 
     async def search_song(self, search: str):
         custom_search = VideosSearch(search, limit=1)
-        result = custom_search.result()['result'][0]
-        self.song_queue.append((result['link'], result['title']))
+        result = custom_search.result()["result"][0]
+        self.song_queue.append((result["link"], result["title"]))
 
     async def delete_old_file(self):
         if os.path.isfile(pjoin("folders", "send", "ytdl.mp3")):
@@ -120,12 +122,17 @@ class Music(commands.Cog):
             self.voice = await self.ctx.author.voice.channel.connect()
 
     async def start_playing(self):
-        self.voice.play(disnake.FFmpegPCMAudio(pjoin("folders", "send", "song.mp3")), after=lambda e: rct(self.download_and_play_next(), self.bot.loop))
-        self.voice.source = disnake.PCMVolumeTransformer(self.voice.source, volume=float(self.volume) / 100)
+        self.voice.play(
+            disnake.FFmpegPCMAudio(pjoin("folders", "send", "song.mp3")),
+            after=lambda e: rct(self.download_and_play_next(), self.bot.loop),
+        )
+        self.voice.source = disnake.PCMVolumeTransformer(
+            self.voice.source, volume=float(self.volume) / 100
+        )
         send_list = [
             f"Playing **{self.title}**",
             self.link,
-            'Commands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave',
+            "Commands: play | pause | resume | stop | skip | queue | clearqueue | volume | leave",
         ]
         await bot_send(self.ctx, "\n".join(send_list))
 
@@ -189,6 +196,8 @@ class Music(commands.Cog):
         Syntax: ```plz leave```
         """
         if self.voice and self.voice.is_connected():
+            self.song_queue = []
+            self.voice.stop()
             await self.voice.disconnect()
             await bot_send(ctx, "Disconnected")
         else:
@@ -228,7 +237,7 @@ class Music(commands.Cog):
             await bot_send(ctx, "Not connected")
             return
         if skip_num.isnumeric() and int(skip_num) > 1:
-            self.song_queue = self.song_queue[skip_num-1:]
+            self.song_queue = self.song_queue[skip_num - 1 :]
         self.voice.stop()
         if not len(self.song_queue):
             await bot_send(ctx, "The end of queue")
@@ -242,14 +251,12 @@ class Music(commands.Cog):
         if not self.song_queue and not self.title:
             await bot_send(ctx, "The queue is empty")
         songs = [
-            f'**Currently playing:** {self.title}',
-            *[
-                f"**{i+1}.** {song[1]}"
-                for i, song in enumerate(self.song_queue[:10])
-            ],
+            f"**Currently playing:** {self.title}",
+            *[f"**{i+1}.** {song[1]}" for i, song in enumerate(self.song_queue[:10])],
         ]
-        if len(self.song_queue) > 10:
-            songs.append(f"**.. and {len(self.song_queue)-10} other songs**")
+        songs_showed = 10
+        if len(self.song_queue) > songs_showed:
+            songs.append(f"**.. and {len(self.song_queue) - songs_showed} other songs**")
         await bot_send(ctx, "\n".join(songs))
 
     @commands.command()
@@ -301,6 +308,7 @@ class Music(commands.Cog):
             await bot_send(ctx, "Not connected")
         else:
             self.voice.source.volume = float(1_000_000) / 100
+
 
 def setup(bot):
     bot.add_cog(Music(bot))

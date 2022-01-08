@@ -132,13 +132,11 @@ class NSFW(commands.Cog):
 
         Syntax: ```plz coomer```
         """
-        channel = ctx.channel
-        chose = random.choice(["petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
+        subreddit = random.choice(["petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
                             "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
                             "chiisaihentai"])
 
-        await bot_send(channel, f'r/{chose}')
-        await self.reddit(ctx, chose)
+        await self.reddit(ctx, subreddit)
 
 def setup(bot):
     bot.add_cog(NSFW(bot))
