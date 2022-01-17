@@ -17,7 +17,6 @@ class Colour(commands.Cog):
         self.bot = bot
         self.curr_colour = None
 
-
     @commands.command()
     async def colour(self, ctx: Context):
         """Sends an image of a random colour.
@@ -29,7 +28,6 @@ class Colour(commands.Cog):
         Image.new('RGB', (400, 400), (r, g, b)).save(file_path)
         self.curr_colour = (r, g, b)
         await bot_send(ctx, disnake.File(file_path, filename="colour.jpg"))
-
 
     @commands.command()
     async def namecolour(self, ctx: Context, *, name):
@@ -45,7 +43,6 @@ class Colour(commands.Cog):
         with open(pjoin("folders", "text", "colours.txt"), 'a') as f:
             f.write(f'{r} {g} {b} : {name}\n')
 
-
     @commands.command()
     async def colourlist(self, ctx: Context):
         """Lists the names of all named colours.
@@ -53,10 +50,9 @@ class Colour(commands.Cog):
         Syntax: ```plz colourlist```
         """
         with open(pjoin("folders", "text", "colours.txt")) as f:
-            arr = [line[line.find(':')+2: -1] for line in f]
+            arr = [line[line.find(':') + 2: -1] for line in f]
         send = ''.join(f'{prvok}\n' for prvok in arr)
         await bot_send(ctx, send)
-
 
     @commands.command()
     async def showcolour(self, ctx: Context, *, name):
@@ -71,7 +67,8 @@ class Colour(commands.Cog):
                 r, g, b = [int(c) for c in rgb.split()]
                 img = Image.new('RGB', (400, 400), (r, g, b))
                 img.save(pjoin("folders", "send", "colour.jpg"))
-                await bot_send(ctx, disnake.File(pjoin("folders", "send", "colour.jpg"), pjoin("folders", "send", "colour.jpg")))
+                await bot_send(ctx, disnake.File(pjoin("folders", "send", "colour.jpg"),
+                                                 pjoin("folders", "send", "colour.jpg")))
                 return
 
         await bot_send(ctx, "Colour not found")

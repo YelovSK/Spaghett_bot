@@ -13,7 +13,7 @@ class Remind(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.stop = False
-        self.remindrun = False
+        self.reminder_active = False
 
     async def remind(self, ctx: Context, *, string):
         split = string.split()
@@ -21,15 +21,15 @@ class Remind(commands.Cog):
         repeat = split[-1] == '/repeat/'
         if split[1] in ('hours', 'hour'):
             when = float(split[0])
-            min = False
+            minute = False
         elif split[1] in ('minute', 'minutes'):
             when = int(split[0])
-            min = True
-        for prvok in split[2:]:
-            if repeat and prvok == split[-1]:
+            minute = True
+        for x in split[2:]:
+            if repeat and x == split[-1]:
                 break
-            send += f'{prvok} '
-        if min:
+            send += f'{x} '
+        if minute:
             await bot_send(ctx, f'Reminding in {when} minutes')
             mul = 60
         else:
@@ -38,7 +38,7 @@ class Remind(commands.Cog):
             else:
                 await bot_send(ctx, f'Reminding in {round(when // 1)}h{round((when % 1) * 60)}m')
             mul = 3600
-        self.remindrun = True
+        self.reminder_active = True
         if repeat:
             self.stop = False
             for _ in range(100):
@@ -49,10 +49,10 @@ class Remind(commands.Cog):
         else:
             await asyncio.sleep(round(when * mul))
             await bot_send(ctx, send)
-            self.remindrun = False
+            self.reminder_active = False
 
     async def remind_active(self, ctx: Context):
-        if self.remindrun:
+        if self.reminder_active:
             await bot_send(ctx, 'Ye')
         else:
             await bot_send(ctx, 'Nah')

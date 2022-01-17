@@ -145,7 +145,7 @@ class Media(commands.Cog):
         videos = [f for f in os.listdir(self.videos_path) if f.endswith(".mp4")]
 
         if not video:
-            vid_list = ''.join(f"{vid[:vid.find('.')]}, " for vid in videos)
+            vid_list = ", ".join(videos)
             await bot_send(ctx, f'List of videos: {vid_list}')
             return
 

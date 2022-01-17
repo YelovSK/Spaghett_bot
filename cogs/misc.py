@@ -592,7 +592,8 @@ class Misc(commands.Cog):
         Syntax: ```plz me```
         """
         channel = ctx.channel
-        await bot_send(channel, ctx.author)
+        await bot_send(channel, f"{ctx.author.mention} - {ctx.author}")
+        await bot_send(channel, ctx.author.avatar.url)
 
     @commands.command()
     async def sorry(self, ctx: Context, name=""):

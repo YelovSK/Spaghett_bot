@@ -14,6 +14,30 @@ with open("config.json") as file:
     config = json.load(file)
 
 
+async def ai(
+        engine,
+        prompt,
+        temperature,
+        max_tokens,
+        top_p,
+        frequency_penalty,
+        presence_penalty,
+        stop=None,
+):
+    openai.api_key = config["openai"]
+    response = openai.Completion.create(
+        engine=engine,
+        prompt=prompt,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        top_p=top_p,
+        frequency_penalty=0.0,
+        presence_penalty=presence_penalty,
+        stop=stop,
+    )
+    return response.choices[0].text
+
+
 class AI(commands.Cog):
     """AI text (and audio) generation"""
 
@@ -23,30 +47,6 @@ class AI(commands.Cog):
         self.bot = bot
         self.text2speech_model = None
 
-    async def ai(
-        self,
-        engine,
-        prompt,
-        temperature,
-        max_tokens,
-        top_p,
-        frequency_penalty,
-        presence_penalty,
-        stop=None,
-    ):
-        openai.api_key = config["openai"]
-        response = openai.Completion.create(
-            engine=engine,
-            prompt=prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-            frequency_penalty=0.0,
-            presence_penalty=presence_penalty,
-            stop=stop,
-        )
-        return response.choices[0].text
-
     @commands.command()
     async def aigenerate(self, ctx: Context, *, prompt):
         """Generates text from a prompt.
@@ -55,7 +55,7 @@ class AI(commands.Cog):
         Example: ```plz aigenerate I wish my dream anime waifu would become real because```
         """
         await bot_send(ctx, "brb, generating...")
-        output = await self.ai("davinci", prompt, 0.4, 500, 1, 0.5, 0)
+        output = await ai("davinci", prompt, 0.4, 500, 1, 0.5, 0)
         output = prompt + output
         new_output = ""
         for line in output.split("\n"):
@@ -76,7 +76,7 @@ class AI(commands.Cog):
         """
         if not prompt[0].isupper():
             prompt = prompt[0].capitalize() + prompt[1:]
-        output = await self.ai(
+        output = await ai(
             "davinci-instruct-beta",
             f"Q: Who is Batman?\nA: Batman is a fictional comic book character.\n###\nQ: What is torsalplexity?\nA: ?\n###\nQ: What is Devz9?\nA: ?\n###\nQ: Who is George Lucas?\nA: George Lucas is American film director and producer famous for creating Star Wars.\n###\nQ: What is the capital of California?\nA: Sacramento.\n###\nQ: What orbits the Earth?\nA: The Moon.\n###\nQ: Who is Fred Rickerson?\nA: ?\n###\nQ: What is an atom?\nA: An atom is a tiny particle that makes up everything.\n###\nQ: Who is Alvan Muntz?\nA: ?\n###\nQ: What is Kozar-09?\nA: ?\n###\nQ: How many moons does Mars have?\nA: Two, Phobos and Deimos.\n###\nQ: {prompt}\nA:",
             0.0,
@@ -95,7 +95,7 @@ class AI(commands.Cog):
         Syntax: ```plz aiad <prompt>```
         Example: ```plz aiad Do you want to dab on 'em hates? Just get```
         """
-        output = await self.ai(
+        output = await ai(
             "davinci-instruct-beta",
             f'Write a creative ad for the following product:\n""""""\n{prompt}\n""""""\nThis is the ad I wrote aimed at teenage girls:\n""""""',
             0.5,
@@ -114,7 +114,7 @@ class AI(commands.Cog):
         Syntax: ```plz aianalogy <prompt>```
         Example: ```plz aianalogy Life is like Hitler```
         """
-        output = await self.ai(
+        output = await ai(
             "davinci-instruct-beta",
             f"Ideas are like balloons in that: they need effort to realize their potential.\n\n{prompt} in that:",
             0.5,
@@ -133,7 +133,7 @@ class AI(commands.Cog):
         Syntax: ```plz aiengrish <text>```
         Example: ```plz aiengrish u wot m8```
         """
-        output = await self.ai(
+        output = await ai(
             "davinci-instruct-beta",
             f"Original: {prompt}\nStandard American English:",
             0,
@@ -152,7 +152,7 @@ class AI(commands.Cog):
         Syntax: ```plz aicode <description>```
         Example: ```plz aicode Function that returns the sum of all values in the list```
         """
-        output = await self.ai("davinci-codex", prompt, 0, 64, 1.0, 0.0, 0.0, "#")
+        output = await ai("davinci-codex", prompt, 0, 64, 1.0, 0.0, 0.0, "#")
         await bot_send(ctx, output)
 
     @commands.command()

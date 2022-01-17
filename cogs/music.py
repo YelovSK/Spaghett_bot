@@ -237,7 +237,7 @@ class Music(commands.Cog):
             await bot_send(ctx, "Not connected")
             return
         if skip_num.isnumeric() and int(skip_num) > 1:
-            self.song_queue = self.song_queue[skip_num - 1 :]
+            self.song_queue = self.song_queue[int(skip_num) - 1 :]
         self.voice.stop()
         if not len(self.song_queue):
             await bot_send(ctx, "The end of queue")

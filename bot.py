@@ -7,9 +7,9 @@ from datetime import datetime
 from disnake.ext.commands import Bot
 from message_send import bot_send
 
-
 config = json.load(open("config.json"))
 bot = Bot(command_prefix=config["prefix"])
+
 
 @bot.event
 async def on_ready():
@@ -17,9 +17,11 @@ async def on_ready():
     print(f"disnake API version: {disnake.__version__}")
     print(f"Python version: {python_version()}")
     print("-" * 20)
-    await bot.change_presence(activity=disnake.Game("plz help (it's poggers)"))
+    await bot.change_presence(activity=disnake.Game("plz help"))
+
 
 bot.remove_command("help")
+
 
 @bot.event
 async def on_message(message: disnake.Message):
@@ -27,6 +29,7 @@ async def on_message(message: disnake.Message):
         return
     if message.content.lower() == "uwu":
         await bot_send(message.channel, f"did someone say uwu? you're very uwu {message.author.mention} :)")
+        await bot_send(message.channel, message.author.avatar.url)
     else:
         await bot.process_commands(message)
 
@@ -42,7 +45,7 @@ async def on_command_completion(ctx):
     command = ctx.command.qualified_name.split()[0]
     curr_time = datetime.now().strftime("%H:%M:%S")
     print(f"Executed {command} by {ctx.message.author} at {curr_time}")
-    
+
 
 def load_extensions():
     for file in [f[:-3] for f in listdir("./cogs") if f.endswith(".py")]:

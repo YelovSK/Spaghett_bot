@@ -3,6 +3,7 @@ from disnake.ext import commands
 from disnake import Embed
 import disnake
 
+
 class HelpDropdown(disnake.ui.Select):
     def __init__(self, help_command: "MyHelpCommand", options: list[disnake.SelectOption]):
         super().__init__(placeholder="Choose a category...", min_values=1, max_values=1, options=options)
@@ -18,7 +19,8 @@ class HelpDropdown(disnake.ui.Select):
 
 
 class HelpView(disnake.ui.View):
-    def __init__(self, help_command: "MyHelpCommand", options: list[disnake.SelectOption], *, timeout: Optional[float] = 120.0):
+    def __init__(self, help_command: "MyHelpCommand", options: list[disnake.SelectOption], *,
+                 timeout: Optional[float] = 120.0):
         super().__init__(timeout=timeout)
         self.add_item(HelpDropdown(help_command, options))
         self._help_command = help_command
@@ -57,8 +59,8 @@ class MyHelpCommand(commands.MinimalHelpCommand):
         return options
 
     async def _help_embed(
-        self, title: str, description: Optional[str] = None, mapping: Optional[str] = None,
-        command_set: Optional[Set[commands.Command]] = None, set_author: bool = False
+            self, title: str, description: Optional[str] = None, mapping: Optional[str] = None,
+            command_set: Optional[Set[commands.Command]] = None, set_author: bool = False
     ) -> Embed:
         embed = Embed(title=title)
         if description:
@@ -103,7 +105,7 @@ class MyHelpCommand(commands.MinimalHelpCommand):
             mapping=mapping,
             set_author=True,
         )
-    
+
     async def send_bot_help(self, mapping: dict):
         embed = await self.bot_help_embed(mapping)
         options = await self._cog_select_options()
@@ -137,19 +139,22 @@ class MyHelpCommand(commands.MinimalHelpCommand):
 
     # Use the same function as command help for group help
     send_group_help = send_command_help
-    
+
+
 class HelpCog(commands.Cog, name="Help"):
     """Shows help info for commands and cogs"""
 
     COG_EMOJI = "❔"
 
     def __init__(self, bot):
+        self.bot = bot
         self._original_help_command = bot.help_command
         bot.help_command = MyHelpCommand()
         bot.help_command.cog = self
 
     def cog_unload(self):
         self.bot.help_command = self._original_help_command
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(HelpCog(bot))

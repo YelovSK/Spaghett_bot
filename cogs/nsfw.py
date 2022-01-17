@@ -3,7 +3,7 @@ import random
 import os
 import asyncio
 import praw
-import urllib
+import urllib.request
 
 from message_send import bot_send
 from disnake.ext import commands
@@ -20,7 +20,6 @@ class NSFW(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
     @commands.command()
     async def fap(self, ctx: Context, *, folder=''):
         """Sends a fap image. Random folder or specified [folder].
@@ -33,7 +32,8 @@ class NSFW(commands.Cog):
             folder = random.choice(folders)
 
         path = pjoin("F:\\Desktop start menu", "homework", folder)
-        files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f)) if os.path.getsize(pjoin(path, f)) < 8_000_000]
+        files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f)) if
+                 os.path.getsize(pjoin(path, f)) < 8_000_000]
         file_path = pjoin("folders", "send", "homework.png")
         Image.open(pjoin(path, random.choice(files))).save(file_path)
         file = disnake.File(file_path, filename=file_path)
@@ -78,11 +78,11 @@ class NSFW(commands.Cog):
             await bot_send(channel, file)
         except Exception as error:
             await bot_send(channel, 'oopsie, failed to upload kawaii')
-            print(error + '\n' + choice)
+            print(str(error) + '\n' + choice)
         if do:
-            await asyncio.sleep(3600*4)
+            await asyncio.sleep(3600 * 4)
             await self.kawaii(ctx, 'cum')
-            
+
     @commands.command()
     async def reddit(self, ctx: Context, sub, text=None):
         """Sends a Reddit post from subreddit.
@@ -93,10 +93,10 @@ class NSFW(commands.Cog):
         data = open(pjoin("folders", "text", "reddit.txt")).read().splitlines()
 
         reddit = praw.Reddit(client_id=data.pop(),
-                            client_secret=data.pop(),
-                            username=data.pop(),
-                            password=data.pop(),
-                            user_agent=data.pop())
+                             client_secret=data.pop(),
+                             username=data.pop(),
+                             password=data.pop(),
+                             user_agent=data.pop())
 
         subreddit = reddit.subreddit(sub)
 
@@ -107,7 +107,8 @@ class NSFW(commands.Cog):
             for post in posts:
                 try:
                     if post.selftext:
-                        await bot_send(ctx, f'****Subreddit:**** r/{sub}\n****Title:**** {post.title}\n{post.ups}⇧ | {post.downs}⇩ \n\n{post.selftext}')
+                        await bot_send(ctx,
+                                       f'****Subreddit:**** r/{sub}\n****Title:**** {post.title}\n{post.ups}⇧ | {post.downs}⇩ \n\n{post.selftext}')
                         return
                 except Exception as e:
                     print(e)
@@ -124,8 +125,9 @@ class NSFW(commands.Cog):
                 await bot_send(ctx, "*Couldn't find an image.*")
                 return
         await bot_send(ctx, f'****Subreddit****: r/{sub}')
-        await bot_send(ctx.channel, disnake.File(pjoin("folders", "send", "reddit.png"), pjoin("folders", "send", "reddit.png")))
-            
+        await bot_send(ctx,
+                       disnake.File(pjoin("folders", "send", "reddit.png"), pjoin("folders", "send", "reddit.png")))
+
     @commands.command()
     async def coomer(self, ctx: Context):
         """Sends an image from a random lewd subreddit.
@@ -133,10 +135,11 @@ class NSFW(commands.Cog):
         Syntax: ```plz coomer```
         """
         subreddit = random.choice(["petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
-                            "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
-                            "chiisaihentai"])
+                                   "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
+                                   "chiisaihentai"])
 
         await self.reddit(ctx, subreddit)
+
 
 def setup(bot):
     bot.add_cog(NSFW(bot))
