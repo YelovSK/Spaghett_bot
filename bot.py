@@ -1,13 +1,13 @@
 import json
 import disnake
-
 from platform import python_version
 from os import listdir
 from datetime import datetime
 from disnake.ext.commands import Bot
 from message_send import bot_send
 
-config = json.load(open("config.json"))
+with open("config.json") as cfg:
+    config = json.load(cfg)
 bot = Bot(command_prefix=config["prefix"])
 
 

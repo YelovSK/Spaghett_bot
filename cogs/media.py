@@ -22,7 +22,7 @@ class Media(commands.Cog):
     async def send_video(self, ctx: Context, name):
         send = pjoin(self.videos_path, name)
         await bot_send(ctx, disnake.File(send, send))
-        
+
     async def send_file(self, ctx: Context, name):
         send = pjoin(self.media_path, name)
         await bot_send(ctx, disnake.File(send, send))
@@ -34,7 +34,7 @@ class Media(commands.Cog):
         Syntax: ```plz AAA```
         """
         await self.send_video(ctx, "aaa.mp4")
-        
+
     @commands.command()
     async def EEE(self, ctx: Context):
         """Sends subaru_scream.mp4.
@@ -42,7 +42,7 @@ class Media(commands.Cog):
         Syntax: ```plz EEE```
         """
         await self.send_video(ctx, "EEE.mp4")
-        
+
     @commands.command()
     async def AAAEEE(self, ctx: Context):
         """Sends EoE_ptsd.mp4.
@@ -50,7 +50,7 @@ class Media(commands.Cog):
         Syntax: ```plz AAAEEE```
         """
         await self.send_video(ctx, "AAAEEE.mp4")
-        
+
     @commands.command()
     async def whOMEGALUL(self, ctx: Context):
         """Sends a random video making fun of Rem disappearing.
@@ -58,7 +58,7 @@ class Media(commands.Cog):
         Syntax: ```plz whOMEGALUL```
         """
         await self.send_video(ctx, "who" + str(random.randint(1, 4)) + ".mp4")
-        
+
     @commands.command()
     async def deth(self, ctx: Context):
         """Sends Komm Susser Tod..
@@ -66,7 +66,7 @@ class Media(commands.Cog):
         Syntax: ```plz deth```
         """
         await self.send_file(ctx, "tod.mp3")
-        
+
     @commands.command()
     async def aeoo(self, ctx: Context):
         """Sends Sends a spook sound from Re:Zero.
@@ -74,7 +74,7 @@ class Media(commands.Cog):
         Syntax: ```plz aeoo```
         """
         await self.send_file(ctx, "aeoo.mp3")
-        
+
     @commands.command()
     async def meme(self, ctx: Context):
         """Sends a random meme.
@@ -91,7 +91,7 @@ class Media(commands.Cog):
         img.save(save)
         file = disnake.File(save, filename=save)
         await bot_send(ctx, file)
-        
+
     @commands.command()
     async def image(self, ctx: Context, img_name='', *, text=''):
         """Puts text on an image. Lists images if no argument.
@@ -107,7 +107,7 @@ class Media(commands.Cog):
             await bot_send(ctx, f'Image list:\n{send}')
             return
 
-        basewidth = 1200
+        base_width = 1200
         img = None
         for ext in (".png", ".jpg", ".bmp", ".jpeg"):
             curr_path = pjoin("folders", "imgs", img_name + ext)
@@ -115,26 +115,27 @@ class Media(commands.Cog):
                 img = Image.open(curr_path)
                 break
         if img is None:
-            await self.my_send(ctx, "Image not found")
+            await bot_send(ctx, "Image not found")
             return
 
-        wpercent = (basewidth / float(img.size[0]))
-        hsize = int((float(img.size[1]) * float(wpercent)))
-        img = img.resize((basewidth, hsize), Image.ANTIALIAS)
+        w_percent = (base_width / float(img.size[0]))
+        h_size = int((float(img.size[1]) * float(w_percent)))
+        img = img.resize((base_width, h_size), Image.ANTIALIAS)
         draw = ImageDraw.Draw(img)
 
         message = ' '.join(list(text))
 
         char_count = len(message)
         for offset, col in ((230, "black"), (200, "white")):
-            font = ImageFont.truetype(pjoin("folders", "assets", "font.ttf"), int((basewidth + offset) / ((char_count / 2) + 4)))
-            fontsize = int((basewidth + offset) / ((char_count / 2) + 3))
+            font = ImageFont.truetype(pjoin("folders", "assets", "font.ttf"),
+                                      int((base_width + offset) / ((char_count / 2) + 4)))
+            fontsize = int((base_width + offset) / ((char_count / 2) + 3))
             w, _ = draw.textsize(message, font=font)
-            draw.text(((img.width-w) / 2, img.height - (fontsize / 1.2) - 30), message, font=font, fill=col)
+            draw.text(((img.width - w) / 2, img.height - (fontsize / 1.2) - 30), message, font=font, fill=col)
         img.save(pjoin(self.media_path, "meme.png"))
 
         await self.send_file(ctx, "meme.png")
-        
+
     @commands.command()
     async def video(self, ctx: Context, *, video=''):
         """Sends a video. Send with no argument for list of videos.
@@ -153,14 +154,15 @@ class Media(commands.Cog):
             await bot_send(ctx, 'No such video.')
         else:
             await self.send_video(ctx, f"{video}.mp4")
-            
+
     @commands.command()
     async def text(self, ctx: Context, filename=''):
         """Sends a text file.
 
         Syntax: ```plz text <filename>```
         """
-        await bot_send(ctx, "".join(open(pjoin("folders", "text", f"{filename}.txt")).readlines()))
+        with open(pjoin("folders", "text", f"{filename}.txt")) as f:
+            await bot_send(ctx, f.read())
 
 
 def setup(bot):

@@ -14,8 +14,8 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from yt_dlp import YoutubeDL
 from youtubesearchpython import Video, VideosSearch
 
-with open("config.json") as file:
-    config = json.load(file)
+with open("config.json") as cfg:
+    config = json.load(cfg)
 
 
 class Music(commands.Cog):
@@ -237,7 +237,7 @@ class Music(commands.Cog):
             await bot_send(ctx, "Not connected")
             return
         if skip_num.isnumeric() and int(skip_num) > 1:
-            self.song_queue = self.song_queue[int(skip_num) - 1 :]
+            self.song_queue = self.song_queue[int(skip_num) - 1:]
         self.voice.stop()
         if not len(self.song_queue):
             await bot_send(ctx, "The end of queue")

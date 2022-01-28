@@ -28,7 +28,8 @@ class NSFW(commands.Cog):
         Example: ```plz fap Asuka```
         """
         if not folder:
-            folders = open(pjoin("folders", "text", "fap.txt")).read().splitlines()
+            with open(pjoin("folders", "text", "fap.txt")) as f:
+                folders = f.read().splitlines()
             folder = random.choice(folders)
 
         path = pjoin("F:\\Desktop start menu", "homework", folder)
@@ -37,7 +38,7 @@ class NSFW(commands.Cog):
         file_path = pjoin("folders", "send", "homework.png")
         Image.open(pjoin(path, random.choice(files))).save(file_path)
         file = disnake.File(file_path, filename=file_path)
-        await bot_send(ctx.channel, f'****Folder:**** {folder}')
+        await bot_send(ctx, f'****Folder:**** {folder}')
         try:
             await bot_send(ctx, file)
         except Exception as error:
@@ -60,7 +61,8 @@ class NSFW(commands.Cog):
             await bot_send(channel, file)
             return
 
-        order = open(pjoin("folders", "text", "pseudorandom_kawaii.txt")).readlines()
+        with open(pjoin("folders", "text", "pseudorandom_kawaii.txt")) as f:
+            order = f.readlines()
         path = pjoin("folders", "send", "kawaii")
         files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f))]
         choice = random.choice(files[5:])
@@ -90,7 +92,8 @@ class NSFW(commands.Cog):
         Syntax: ```plz reddit <subreddit> ["text"]```
         Example: ```plz reddit 2meirl4meirl``` ```plz reddit askreddit text```
         """
-        data = open(pjoin("folders", "text", "reddit.txt")).read().splitlines()
+        with open(pjoin("folders", "text", "reddit.txt")) as f:
+            data = f.read().splitlines()
 
         reddit = praw.Reddit(client_id=data.pop(),
                              client_secret=data.pop(),

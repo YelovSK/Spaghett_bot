@@ -16,8 +16,8 @@ from os.path import join as pjoin
 from pyowm.owm import OWM
 
 
-with open("config.json") as file:
-    config = json.load(file)
+with open("config.json") as cfg:
+    config = json.load(cfg)
 
 
 class Misc(commands.Cog):
@@ -35,7 +35,6 @@ class Misc(commands.Cog):
         Syntax: ```plz insult <username>```
         Example: ```plz insult yomama```
         """
-        channel = ctx.channel
         found = False
         curr_user = str(ctx.author)[: str(ctx.author).find("#")]
 
@@ -65,12 +64,12 @@ class Misc(commands.Cog):
                 actions = lines
 
         if not found:
-            await bot_send(channel, "No such member. Dumb fuck.")
+            await bot_send(ctx, "No such member. Dumb fuck.")
         else:
             adj = random.choice(adjectives)
             noun = random.choice(nouns)
             act = random.choice(actions)
-            await bot_send(channel, f"<@{name}> go {act}, you {adj} {noun}.")
+            await bot_send(ctx, f"<@{name}> go {act}, you {adj} {noun}.")
 
     @commands.command()
     async def fuck(self, ctx: Context):
@@ -451,7 +450,6 @@ class Misc(commands.Cog):
         Syntax: ```plz guess <num>```
         Example: ```plz guess 322```
         """
-        channel = ctx.channel
         change = False
         current, guesses = None, None
         users = {}
@@ -473,7 +471,7 @@ class Misc(commands.Cog):
 
         if int(current) == int(num):
             await bot_send(
-                channel,
+                ctx,
                 f"""Guessed in {int(guesses)+1}
     tries\n{curr_user[:curr_user.find("#")]} guessed correctly
     {users[curr_user]+1} times""",
@@ -491,9 +489,9 @@ class Misc(commands.Cog):
             return
 
         if int(num) < int(current):
-            await bot_send(channel, "Higher")
+            await bot_send(ctx, "Higher")
         else:
-            await bot_send(channel, "Lower")
+            await bot_send(ctx, "Lower")
         with open(pjoin("folders", "text", "guess.txt"), "w") as file:
             file.write(f"{current}\n{int(guesses)+1}")
 
@@ -575,7 +573,7 @@ class Misc(commands.Cog):
         """
         string = str(ctx.author)
         string = string[: string.find("#")]
-        await bot_send(ctx.channel, f"{string} go commit die")
+        await bot_send(ctx, f"{string} go commit die")
 
     @commands.command()
     async def goodbot(self, ctx: Context):
@@ -591,9 +589,8 @@ class Misc(commands.Cog):
 
         Syntax: ```plz me```
         """
-        channel = ctx.channel
-        await bot_send(channel, f"{ctx.author.mention} - {ctx.author}")
-        await bot_send(channel, ctx.author.avatar.url)
+        await bot_send(ctx, f"{ctx.author.mention} - {ctx.author}")
+        await bot_send(ctx, ctx.author.avatar.url)
 
     @commands.command()
     async def sorry(self, ctx: Context, name=""):
@@ -602,14 +599,13 @@ class Misc(commands.Cog):
         Syntax: ```plz sorry <name>```
         Example: ```plz sorry Yelov```
         """
-        channel = ctx.channel
         curr_user = str(ctx.author)[: str(ctx.author).find("#")]
         if not name:
-            await bot_send(channel, "u r sorry to whom? dumbass")
+            await bot_send(ctx, "u r sorry to whom? dumbass")
         elif name.lower() == "spaghett bot":
-            await bot_send(channel, "ye no problem bro")
+            await bot_send(ctx, "ye no problem bro")
         elif name.lower() == curr_user.lower():
-            await bot_send(channel, "i'm sorry but the results came in - you're a narcissist")
+            await bot_send(ctx, "i'm sorry but the results came in - you're a narcissist")
         else:
             found = False
             for member in ctx.guild.members:
@@ -621,14 +617,14 @@ class Misc(commands.Cog):
                     break
             if not found:
                 await bot_send(
-                    channel,
+                    ctx,
                     """i'm sorry to user who doesn't exist.. 
     or mby it was someone's nickname, but i deleted that cuz of some bug i can't be bothered to fix :)""",
                 )
                 return
             with open(pjoin("folders", "text", "sry.txt")) as f:
                 send = f.readline()
-            await bot_send(channel, f"<@{name_d}> {send}")
+            await bot_send(ctx, f"<@{name_d}> {send}")
 
     @commands.command()
     async def epicshit(self, ctx: Context):

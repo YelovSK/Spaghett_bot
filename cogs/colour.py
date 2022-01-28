@@ -25,7 +25,8 @@ class Colour(commands.Cog):
         """
         r, g, b = random.randrange(256), random.randrange(256), random.randrange(256)
         file_path = pjoin("folders", "send", "colour.jpg")
-        Image.new('RGB', (400, 400), (r, g, b)).save(file_path)
+        img = Image.new(mode="RGB", size=(400, 400), color=(r, g, b))
+        img.save(file_path)
         self.curr_colour = (r, g, b)
         await bot_send(ctx, disnake.File(file_path, filename="colour.jpg"))
 
@@ -61,7 +62,9 @@ class Colour(commands.Cog):
         Syntax: ```plz showcolour <name>```
         Example: ```plz showcolour literally piss```
         """
-        for line in open(pjoin("folders", "text", "colours.txt")).read().splitlines():
+        with open(pjoin("folders", "text", "colours.txt")) as f:
+            file_lines = f.read().splitlines()
+        for line in file_lines:
             rgb, curr_name = line.split(" : ")
             if curr_name == name:
                 r, g, b = [int(c) for c in rgb.split()]

@@ -7,7 +7,7 @@ from disnake.ext.commands import Context
 
 class Remind(commands.Cog):
     """nice memory pleb"""
-    
+
     COG_EMOJI = "⌚"
 
     def __init__(self, bot):

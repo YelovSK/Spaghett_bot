@@ -10,8 +10,8 @@ from disnake.ext.commands import Context
 from os.path import join as pjoin
 from espnet2.bin.tts_inference import Text2Speech
 
-with open("config.json") as file:
-    config = json.load(file)
+with open("config.json") as cfg:
+    config = json.load(cfg)
 
 
 async def ai(
