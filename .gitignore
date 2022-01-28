@@ -1,4 +1,4 @@
-# Hidden stuff
+# Media files
 *.jpg
 *.jpeg
 *.png
@@ -18,3 +18,5 @@
 *.ttf
 *.sfk
 folders
+folders/
+.*
