@@ -5,71 +5,103 @@ import random
 import re
 import shelve
 import shutil
+import sqlite3
 import time
-
+import datetime
+from html.entities import name2codepoint
 from io import StringIO
+from typing import List, Dict, Tuple, Set
 from message_send import bot_send
 from disnake.ext import commands
 from disnake.ext.commands import Context
 from collections import Counter
 
-with open("config.json") as file:
-    config = json.load(file)
+with open("config.json") as cfg:
+    config = json.load(cfg)
+
+
+def decode_entities(text: str) -> str:
+    def unescape(match):
+        code = match.group(1)
+        if code:
+            return chr(int(code, 10))
+        code = match.group(2)
+        if code:
+            return chr(int(code, 16))
+        code = match.group(3)
+        if code in name2codepoint:
+            return chr(name2codepoint[code])
+        return match.group(0)
+
+    entity_pattern = re.compile(r"&(?:#(\d+)|#x([\da-fA-F]+)|([a-zA-Z]+));")
+    return entity_pattern.sub(unescape, text)
+
+
+def get_date_from_tick(ticks: int) -> str:
+    date = datetime.datetime(1, 1, 1) + datetime.timedelta(microseconds=ticks // 10)
+    return date.strftime(r"%d.%m.%Y")
 
 
 class Finder:
 
-    def __init__(self, files: list[str]):
-        self.files = files
+    def __init__(self):
         self.occurrences = 0
-        self.find_output = StringIO()
         self.exact_match = False
 
-    def find(self, word: str, exact_match: bool):
+    def find_and_get_output(self, word: str, exact_match: bool) -> Tuple[str, int]:
+        return self._find(word, exact_match), self.occurrences
+
+    def find_and_get_occurrences(self, word: str, exact_match: bool) -> int:
+        self._find(word, exact_match)
+        return self.occurrences
+
+    def _find(self, word: str, exact_match: bool) -> str:
         self.exact_match = exact_match
-        self.find_output = StringIO()
-        self.files_output = {}
         self.occurrences = 0
         word = word.lower()
-        for file in self.files:
-            self._find_word_in_file(file, word)
+        with shelve.open(os.path.join(".shelve", "journal")) as jour:
+            entries_map = jour["entries"]
+        return "".join(
+            self._find_word_in_file(entry, word)
+            for entry in entries_map.items()
+        )
 
-    def _find_word_in_file(self, file: str, word: str):
-        with open(file, encoding="utf-8") as f:
-            file_content = f.read()
-        date_inserted = False
-        sentences = self._split_text_into_sentences(file_content)
-        for sentence in sentences:
-            if not self.is_word_in_sentence(sentence, word):
-                continue
-            if not date_inserted:
-                self._insert_date(file)
-                date_inserted = True
-            self._find_word_in_sentence(sentence, word)
-        if date_inserted:
-            self.find_output.write("\n")
+    def _find_word_in_file(self, entry: Dict[str, str], word: str) -> str:
+        file_output = StringIO()
+        date, text = entry
+        sentences = self.split_text_into_sentences(text)
+        sentences_containing_word = [s for s in sentences if self._is_word_in_sentence(s, word)]
+        if not sentences_containing_word:
+            return file_output.getvalue()
+        file_output.write(date + "\n")
+        for sentence in sentences_containing_word:
+            file_output.write(self._find_word_in_sentence(sentence, word) + "\n")
+        file_output.write("\n")
+        return file_output.getvalue()
 
-    def _split_text_into_sentences(self, text: str):
+    @staticmethod
+    def split_text_into_sentences(text: str) -> List[str]:
         split_regex = r"(?<=[.!?\n])\s+"
         return [sentence.strip() for sentence in re.split(split_regex, text)]
 
-    def _find_word_in_sentence(self, sentence: str, word: str):
+    def _find_word_in_sentence(self, sentence: str, word: str) -> str:
+        sentence_output = StringIO()
         highlight_style = "**"
         for curr_word in sentence.split():
-            if self.is_the_same_word(curr_word, word):
+            if self._is_the_same_word(curr_word, word):
                 self.occurrences += 1
-                self.find_output.write(f"{highlight_style}{curr_word}{highlight_style} ")
+                sentence_output.write(f"{highlight_style}{curr_word}{highlight_style} ")
             else:
-                self.find_output.write(f"{curr_word} ")
-        self.find_output.write("\n")
+                sentence_output.write(f"{curr_word} ")
+        return sentence_output.getvalue()
 
-    def is_word_in_sentence(self, sentence: str, word: str):
+    def _is_word_in_sentence(self, sentence: str, word: str) -> bool:
         return any(
-            self.is_the_same_word(curr_word, word)
+            self._is_the_same_word(curr_word, word)
             for curr_word in sentence.split()
         )
 
-    def is_the_same_word(self, word1: str, word2: str):
+    def _is_the_same_word(self, word1: str, word2: str) -> bool:
         if self.exact_match:
             return word1.lower() == word2.lower()
         if len(word2) > len(word1):  # word1 longer or same
@@ -80,166 +112,198 @@ class Finder:
         word2 = word2.lower()
         return word2 in word1
 
-    def _insert_date(self, file_name: str):
-        file_date_begin = file_name.index("2")
-        file_date_end = file_name.index(".txt")
-        year, month, day = file_name[file_date_begin: file_date_end].split("-")
-        date_style = "*"
-        self.find_output.write(f"{date_style}Date: {day}.{month}.{year}{date_style}\n")
-
-    def get_current_output(self):
-        return self.find_output.getvalue()
-
 
 class Journal(commands.Cog):
 
-    def __init__(self, bot, base_folder: str = os.getcwd()):
-        self.bot = bot
-        base_folder = r"folders/Journal format"
-        self.base = base_folder
-        self.path = os.path.join(self.base, "Diarium")
-        self.files = list(os.listdir(self.path))
-        self.years = self.get_years()
-        self.word_count_dict = {}
-        self.files_list_path = os.path.join(self.base, "files.txt")
-        self.check_file_count_mismatch()
+    def __init__(self) -> None:
+        self.word_count_map = {}
+        self.entries_map = {}
+        self.init_dict()
 
-    def check_file_count_mismatch(self):
-        if not os.path.exists(self.files_list_path):
-            with open(self.files_list_path, "w") as f:
-                f.write("-1")
-        with open(self.files_list_path) as f:
-            files_num = int(f.read())
-        # files_num -> last checked number of files
-        # len(self.files) -> number of files in the Diarium folder
-        if files_num != len(self.files):
-            self.write_dict()
-            self.update_file_count()
-        else:
-            self.init_dict()
-
-    def init_dict(self):
+    def init_dict(self) -> None:
         try:
             self.read_dict()
         except (KeyError, FileNotFoundError):
             self.write_dict()
 
-    def read_dict(self):
-        with shelve.open(os.path.join(self.base, "shelve", "journal")) as jour:
-            self.word_count_dict = jour["freq"]
+    def read_dict(self) -> None:
+        with shelve.open(os.path.join(".shelve", "journal")) as jour:
+            self.word_count_map = jour["freq"]
+            self.entries_map = jour["entries"]
 
-    def write_dict(self):
+    def write_dict(self) -> None:
         self.create_word_frequency()
-        pathlib.Path(os.path.join(self.base, "shelve")).mkdir(parents=True, exist_ok=True)
-        with shelve.open(os.path.join(self.base, "shelve", "journal")) as jour:
-            jour["freq"] = self.word_count_dict
+        self.update_entries_from_db()
+        pathlib.Path(os.path.join(".shelve")).mkdir(parents=True, exist_ok=True)
+        with shelve.open(os.path.join(".shelve", "journal")) as jour:
+            jour["freq"] = self.word_count_map
+            jour["entries"] = self.entries_map
 
-    def create_word_frequency(self):
-        file_content_list = []
-        for file in self.files:
-            with open(os.path.join(self.path, file), encoding="utf-8") as f:
-                file_content_list.append(f.read())
-        content = "".join(file_content_list).lower()
-        self.word_count_dict = Counter(re.findall("\w+", content))
+    def create_word_frequency(self) -> None:
+        content = "".join(self.entries_map.values()).lower()
+        self.word_count_map = Counter(re.findall(r"\w+", content))
 
-    def get_years(self):
-        YEAR_START_IX = 8
-        YEAR_END_IX = YEAR_START_IX + 4
-        return {int(file[YEAR_START_IX: YEAR_END_IX]) for file in self.files}
+    def update_entries_from_db(self) -> None:
+        self.entries_map = {}
+        entries = self.get_entries_from_db()
+        for text_raw, ticks in entries:
+            text = decode_entities(text_raw).replace("<p>", "").replace("</p>", "\n")
+            date = get_date_from_tick(int(ticks))
+            self.entries_map[date] = text
 
-    def create_tree_folder_structure(self):
+    @staticmethod
+    def get_entries_from_db() -> List[str]:
+        database_path = config["diary.db path"]
+        con = sqlite3.connect(database_path)
+        entries = con.cursor().execute("SELECT Text, DiaryEntryId FROM Entries").fetchall()
+        con.close()
+        return entries
+
+    def get_years(self) -> Set[int]:
+        return {int(date.split("-")[-1]) for date in self.entries_map.keys()}
+
+    def create_tree_folder_structure(self) -> None:
         self.create_year_and_month_folders()
         self.create_day_files()
-        self.update_file_count()
 
-    def create_year_and_month_folders(self):
-        for year in [str(y) for y in self.years]:
-            if os.path.exists(os.path.join(self.base, year)):
-                shutil.rmtree(os.path.join(self.base, year))
+    def create_year_and_month_folders(self) -> None:
+        for year in [str(y) for y in self.get_years()]:
+            if os.path.exists(os.path.join("entries", year)):
+                shutil.rmtree(os.path.join("entries", year))
             for month in [str(m) for m in range(1, 12 + 1)]:
-                pathlib.Path(os.path.join(year, month)).mkdir(parents=True, exist_ok=True)
+                pathlib.Path(os.path.join("entries", year, month)).mkdir(parents=True, exist_ok=True)
 
-    def create_day_files(self):
-        for file in self.files:
-            with open(os.path.join(self.path, file), errors="ignore") as f:
-                file_content = f.read()
-            year, month, day = file[file.index("2"):].split("-")
-            if month[0] == "0":
-                month = month[1:]
-            if day[0] == "0":
-                day = day[1:]
-            with open(os.path.join(year, month, day), "w") as day_file:
-                day_file.write(file_content)
+    def create_day_files(self) -> None:
+        for date, text in self.entries_map.items():
+            day, month, year = date.split("-")
+            day = day.lstrip("0")
+            month = month.lstrip("0")
+            with open(os.path.join("entries", year, month, day) + ".txt", "w", encoding="utf-8") as day_file:
+                day_file.write(text)
 
-    def update_file_count(self):
-        with open(self.files_list_path, "w") as f:
-            f.write(str(len(self.files)))
+    def get_most_frequent_words(self, count: int) -> list:
+        return sorted(self.word_count_map.items(), key=lambda item: item[1], reverse=True)[:count]
 
-    def get_most_frequent_words(self, count):
-        return sorted(self.word_count_dict.items(), key=lambda item: item[1], reverse=True)[:count]
+    def get_unique_word_count(self) -> int:
+        return len(self.word_count_map)
 
-    def get_unique_word_count(self):
-        return len(self.word_count_dict)
+    def get_total_word_count(self) -> int:
+        return sum(self.word_count_map.values())
 
-    def get_total_word_count(self):
-        return sum(self.word_count_dict.values())
+    def get_word_occurrences(self, word: str) -> int:
+        return self.word_count_map[word] if word in self.word_count_map else 0
 
-    def find(self, word: str, exact_match: bool):
-        files_full_path = [os.path.join(self.path, file) for file in self.files]
-        self.finder = Finder(files_full_path)
+    def get_english_word_count(self) -> int:
+        # not accurate cuz a word can be both Slovak and English and I don't have a database of Slovak words to compare
+        english_words = set()
+        with open(os.path.join("folders", "text", "words_alpha.txt")) as f:
+            for line in f:
+                english_words.add(line.strip())
+        return sum(count for word, count in self.word_count_map.items() if word in english_words)
+
+    def get_entry_from_date(self, date: str) -> str:
+        # date should be in the format DD.MM.YYYY
+        try:
+            return self.entries_map[date]
+        except KeyError:
+            return None
+
+    def get_random_day(self) -> str:
+        date, text = random.choice(list(self.entries_map.items()))
+        return date + "\n" + text
+
+    def get_longest_day(self) -> str:
+        words_in_file = {}  # file: word_count
+        for date, text in self.entries_map.items():
+            words_in_file[date] = len(text.split())
+        date, word_count = sorted(words_in_file.items(), key=lambda item: item[1])[-1]
+        return f"{date}\nWord count: {word_count}\n\n{self.entries_map[date]}"
+
+    def find_word(self, word: str, exact_match) -> str:
         start = time.time()
-        self.finder.find(word, exact_match)
-        took_time = round(time.time() - start, 3)
-        return self.finder.get_current_output() + f"\nSearched through {self.get_total_word_count()} words in {took_time}s"
-
-    def get_random_day(self):
-        with open(os.path.join(self.path, random.choice(self.files)), encoding="utf-8") as f:
-            return f.read()
+        output, occurrences = Finder().find_and_get_output(word, exact_match)
+        took_time = round(time.time() - start, 2)
+        res = StringIO()
+        res.write(output)
+        res.write(f"\nThe word {word} was found {occurrences} times")
+        res.write(f"\nSearched through {self.get_total_word_count()} words in {took_time}s")
+        return res.getvalue()
 
     @commands.command()
-    async def journal(self, ctx: Context, *, action=None):
-        """Searches through journal.
-        -f {word} -> finds {word}
-        -c {word} -> number of {word} occurences
-        -r -> random day
+    async def journal_find(self, ctx: Context, word: str):
+        """Returns sentences containing <word> and its derivatives.
 
-        Syntax: ```plz journal <action> [word]```
-        Example: ```plz journal -f kokot``` ```plz journal -c kokot``` ```plz journal -r```
+        Syntax: ```plz journal_find <word>```
         """
-        if str(ctx.author)[:str(ctx.author).find("#")] != 'Yelov':
+        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
             await bot_send(ctx, "Ain't your journal bro")
             return
 
-        if action is None:
-            help_l = [
-                '-f {word} -> finds {word}',
-                '-fp {word} -> finds {word} (only exact matches)',
-                '-c {word} -> number of {word} occurences',
-                '-r -> random day',
-            ]
-            await bot_send(ctx, "\n".join(help_l))
+        await bot_send(ctx, self.find_word(word, exact_match=False))
+
+    @commands.command()
+    async def journal_find_exact(self, ctx: Context, word: str):
+        """Returns sentences containing <word>.
+
+        Syntax: ```plz journal_find_exact <word>```
+        """
+        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
+            await bot_send(ctx, "Ain't your journal bro")
             return
 
-        if action[:2] not in ("-f", "-fp", "-c", "-r"):
-            await bot_send(ctx, "Incorrect syntax")
+        await bot_send(ctx, self.find_word(word, exact_match=True))
+
+    @commands.command()
+    async def journal_count(self, ctx: Context, word: str):
+        """Returns the number of occurrences of <word> in the journal.
+
+        Syntax: ```plz journal_count <word>```
+        """
+        await bot_send(ctx, f"The exact match of word '{word}' was found {self.get_word_occurrences(word)} times")
+        occurrences = Finder().find_and_get_occurrences(word=word, exact_match=False)
+        await bot_send(ctx, f"The number of all occurrences (incl. variations) is {occurrences}")
+
+    @commands.command()
+    async def journal_random(self, ctx: Context):
+        """Returns a random entry from the journal.
+
+        Syntax: ```plz journal_random```
+        """
+        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
+            await bot_send(ctx, "Ain't your journal bro")
             return
 
-        do = action.split()[0]
-        inp = " ".join(action.split()[1:]) if action != "-r" else ""
-        journal_text = "if you are reading this then something bugged out"
-        if do == "-f":
-            journal_text = self.find(inp, exact_match=False)
-        elif do == "-fp":
-            journal_text = self.find(inp, exact_match=True)
-        elif do == "-c":
-            self.find(inp, exact_match=False)
-            journal_text = f"The word **{inp}** was found {self.finder.occurrences} times"
-            journal_text += f"\nNumber of exact matches is {self.word_count_dict[inp]}"
-        elif do == "-r":
-            journal_text = "**RANDOM ENTRY:**\n\n" + self.get_random_day()
+        await bot_send(ctx, self.get_random_day())
 
-        await bot_send(ctx, journal_text)
+    @commands.command()
+    async def journal_longest(self, ctx: Context):
+        """Returns the longest entry from the journal.
+
+        Syntax: ```plz journal_longest```
+        """
+        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
+            await bot_send(ctx, "Ain't your journal bro")
+            return
+
+        await bot_send(ctx, self.get_longest_day())
+
+    @commands.command()
+    async def journal_update(self, ctx: Context):
+        """Updates the journal files.
+
+        Syntax: ```plz journal_update```
+        """
+        entries_before = self.entries_map
+        self.update_entries_from_db()
+        entries_after = self.entries_map
+        if entries_before != entries_after:
+            await bot_send(ctx, f"Added {len(entries_after) - len(entries_before)} entries")
+        word_count_before = self.get_total_word_count()
+        self.write_dict()
+        word_count_after = self.get_total_word_count()
+        if word_count_after - word_count_before != 0:
+            await bot_send(ctx, f"Added {word_count_after - word_count_before} words to the dictionary")
 
 
 def setup(bot):
-    bot.add_cog(Journal(bot))
+    bot.add_cog(Journal())
