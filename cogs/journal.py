@@ -1,16 +1,13 @@
+from __future__ import annotations
 import json
 import os
-import pathlib
 import random
 import re
-import shelve
-import shutil
 import sqlite3
 import time
 import datetime
 from html.entities import name2codepoint
 from io import StringIO
-from typing import List, Dict, Tuple, Set
 from message_send import bot_send
 from disnake.ext import commands
 from disnake.ext.commands import Context
@@ -44,11 +41,12 @@ def get_date_from_tick(ticks: int) -> str:
 
 class Finder:
 
-    def __init__(self):
+    def __init__(self, entries: dict[str, str]):
+        self.entries = entries
         self.occurrences = 0
         self.exact_match = False
 
-    def find_and_get_output(self, word: str, exact_match: bool) -> Tuple[str, int]:
+    def find_and_get_output(self, word: str, exact_match: bool) -> tuple[str, int]:
         return self._find(word, exact_match), self.occurrences
 
     def find_and_get_occurrences(self, word: str, exact_match: bool) -> int:
@@ -59,14 +57,12 @@ class Finder:
         self.exact_match = exact_match
         self.occurrences = 0
         word = word.lower()
-        with shelve.open(os.path.join(".shelve", "journal")) as jour:
-            entries_map = jour["entries"]
         return "".join(
             self._find_word_in_file(entry, word)
-            for entry in entries_map.items()
+            for entry in self.entries.items()
         )
 
-    def _find_word_in_file(self, entry: Dict[str, str], word: str) -> str:
+    def _find_word_in_file(self, entry: tuple[str, str], word: str) -> str:
         file_output = StringIO()
         date, text = entry
         sentences = self.split_text_into_sentences(text)
@@ -80,7 +76,7 @@ class Finder:
         return file_output.getvalue()
 
     @staticmethod
-    def split_text_into_sentences(text: str) -> List[str]:
+    def split_text_into_sentences(text: str) -> list[str]:
         split_regex = r"(?<=[.!?\n])\s+"
         return [sentence.strip() for sentence in re.split(split_regex, text)]
 
@@ -114,30 +110,19 @@ class Finder:
 
 
 class Journal(commands.Cog):
+    """you can't use it anyway"""
+    
+    COG_EMOJI = "📕"
 
     def __init__(self) -> None:
         self.word_count_map = {}
         self.entries_map = {}
-        self.init_dict()
+        self.loaded = False  # don't initialize when bot starts cuz it might take a bit
 
-    def init_dict(self) -> None:
-        try:
-            self.read_dict()
-        except (KeyError, FileNotFoundError):
-            self.write_dict()
-
-    def read_dict(self) -> None:
-        with shelve.open(os.path.join(".shelve", "journal")) as jour:
-            self.word_count_map = jour["freq"]
-            self.entries_map = jour["entries"]
-
-    def write_dict(self) -> None:
-        self.create_word_frequency()
+    def load_entries(self) -> None:
         self.update_entries_from_db()
-        pathlib.Path(os.path.join(".shelve")).mkdir(parents=True, exist_ok=True)
-        with shelve.open(os.path.join(".shelve", "journal")) as jour:
-            jour["freq"] = self.word_count_map
-            jour["entries"] = self.entries_map
+        self.create_word_frequency()
+        self.loaded = True
 
     def create_word_frequency(self) -> None:
         content = "".join(self.entries_map.values()).lower()
@@ -152,34 +137,12 @@ class Journal(commands.Cog):
             self.entries_map[date] = text
 
     @staticmethod
-    def get_entries_from_db() -> List[str]:
+    def get_entries_from_db() -> list[str]:
         database_path = config["diary.db path"]
         con = sqlite3.connect(database_path)
         entries = con.cursor().execute("SELECT Text, DiaryEntryId FROM Entries").fetchall()
         con.close()
         return entries
-
-    def get_years(self) -> Set[int]:
-        return {int(date.split("-")[-1]) for date in self.entries_map.keys()}
-
-    def create_tree_folder_structure(self) -> None:
-        self.create_year_and_month_folders()
-        self.create_day_files()
-
-    def create_year_and_month_folders(self) -> None:
-        for year in [str(y) for y in self.get_years()]:
-            if os.path.exists(os.path.join("entries", year)):
-                shutil.rmtree(os.path.join("entries", year))
-            for month in [str(m) for m in range(1, 12 + 1)]:
-                pathlib.Path(os.path.join("entries", year, month)).mkdir(parents=True, exist_ok=True)
-
-    def create_day_files(self) -> None:
-        for date, text in self.entries_map.items():
-            day, month, year = date.split("-")
-            day = day.lstrip("0")
-            month = month.lstrip("0")
-            with open(os.path.join("entries", year, month, day) + ".txt", "w", encoding="utf-8") as day_file:
-                day_file.write(text)
 
     def get_most_frequent_words(self, count: int) -> list:
         return sorted(self.word_count_map.items(), key=lambda item: item[1], reverse=True)[:count]
@@ -201,8 +164,7 @@ class Journal(commands.Cog):
                 english_words.add(line.strip())
         return sum(count for word, count in self.word_count_map.items() if word in english_words)
 
-    def get_entry_from_date(self, date: str) -> str:
-        # date should be in the format DD.MM.YYYY
+    def get_entry_from_date(self, date: str) -> str | None:
         try:
             return self.entries_map[date]
         except KeyError:
@@ -213,15 +175,12 @@ class Journal(commands.Cog):
         return date + "\n" + text
 
     def get_longest_day(self) -> str:
-        words_in_file = {}  # file: word_count
-        for date, text in self.entries_map.items():
-            words_in_file[date] = len(text.split())
-        date, word_count = sorted(words_in_file.items(), key=lambda item: item[1])[-1]
-        return f"{date}\nWord count: {word_count}\n\n{self.entries_map[date]}"
+        date, text = sorted(self.entries_map.items(), key=lambda x: len(x[1].split()))[-1]
+        return date + "\n" + text + "\n" + f"Word count: {len(text.split())}"
 
     def find_word(self, word: str, exact_match) -> str:
         start = time.time()
-        output, occurrences = Finder().find_and_get_output(word, exact_match)
+        output, occurrences = Finder(self.entries_map).find_and_get_output(word, exact_match)
         took_time = round(time.time() - start, 2)
         res = StringIO()
         res.write(output)
@@ -239,6 +198,8 @@ class Journal(commands.Cog):
             await bot_send(ctx, "Ain't your journal bro")
             return
 
+        if not self.loaded:
+            self.load_entries()
         await bot_send(ctx, self.find_word(word, exact_match=False))
 
     @commands.command()
@@ -251,6 +212,8 @@ class Journal(commands.Cog):
             await bot_send(ctx, "Ain't your journal bro")
             return
 
+        if not self.loaded:
+            self.load_entries()
         await bot_send(ctx, self.find_word(word, exact_match=True))
 
     @commands.command()
@@ -259,8 +222,10 @@ class Journal(commands.Cog):
 
         Syntax: ```plz journal_count <word>```
         """
+        if not self.loaded:
+            self.load_entries()
         await bot_send(ctx, f"The exact match of word '{word}' was found {self.get_word_occurrences(word)} times")
-        occurrences = Finder().find_and_get_occurrences(word=word, exact_match=False)
+        occurrences = Finder(self.entries_map).find_and_get_occurrences(word=word, exact_match=False)
         await bot_send(ctx, f"The number of all occurrences (incl. variations) is {occurrences}")
 
     @commands.command()
@@ -273,6 +238,8 @@ class Journal(commands.Cog):
             await bot_send(ctx, "Ain't your journal bro")
             return
 
+        if not self.loaded:
+            self.load_entries()
         await bot_send(ctx, self.get_random_day())
 
     @commands.command()
@@ -285,24 +252,24 @@ class Journal(commands.Cog):
             await bot_send(ctx, "Ain't your journal bro")
             return
 
+        if not self.loaded:
+            self.load_entries()
         await bot_send(ctx, self.get_longest_day())
 
     @commands.command()
-    async def journal_update(self, ctx: Context):
-        """Updates the journal files.
+    async def journal_stats(self, ctx: Context):
+        """Shows stats for the journal.
 
-        Syntax: ```plz journal_update```
+        Syntax: ```plz journal_stats```
         """
-        entries_before = self.entries_map
-        self.update_entries_from_db()
-        entries_after = self.entries_map
-        if entries_before != entries_after:
-            await bot_send(ctx, f"Added {len(entries_after) - len(entries_before)} entries")
-        word_count_before = self.get_total_word_count()
-        self.write_dict()
-        word_count_after = self.get_total_word_count()
-        if word_count_after - word_count_before != 0:
-            await bot_send(ctx, f"Added {word_count_after - word_count_before} words to the dictionary")
+        if not self.loaded:
+            self.load_entries()
+        result = StringIO()
+        result.write(f"Entries: {len(self.entries_map)}\n")
+        result.write(f"Words: {self.get_total_word_count()}\n")
+        result.write(f"Unique words: {self.get_unique_word_count()}\n")
+        result.write(str(self.get_most_frequent_words(10)))
+        await bot_send(ctx, result.getvalue())
 
 
 def setup(bot):
