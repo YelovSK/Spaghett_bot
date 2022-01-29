@@ -9,6 +9,7 @@ from message_send import bot_send
 with open("config.json") as cfg:
     config = json.load(cfg)
 bot = Bot(command_prefix=config["prefix"])
+bot.remove_command("help")
 
 
 @bot.event
@@ -18,9 +19,6 @@ async def on_ready():
     print(f"Python version: {python_version()}")
     print("-" * 20)
     await bot.change_presence(activity=disnake.Game("plz help"))
-
-
-bot.remove_command("help")
 
 
 @bot.event
