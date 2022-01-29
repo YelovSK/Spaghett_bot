@@ -111,7 +111,7 @@ class Finder:
 
 class Journal(commands.Cog):
     """you can't use it anyway"""
-    
+
     COG_EMOJI = "📕"
 
     def __init__(self) -> None:
