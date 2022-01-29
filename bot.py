@@ -47,8 +47,11 @@ async def on_command_completion(ctx):
 
 def load_extensions():
     for file in [f[:-3] for f in listdir("./cogs") if f.endswith(".py")]:
-        bot.load_extension(f"cogs.{file}")
-        print(f"Loaded {file}")
+        try:
+            bot.load_extension(f"cogs.{file}")
+            print(f"Loaded {file}")
+        except Exception as e:
+            print(f"Failed loading {file} -> {e}")
 
 
 if __name__ == "__main__":
