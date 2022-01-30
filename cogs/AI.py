@@ -3,7 +3,7 @@ import openai
 import requests
 import soundfile as sf
 
-from message_send import bot_send
+from helpers.message_send import bot_send
 from disnake import File
 from disnake.ext import commands
 from disnake.ext.commands import Context

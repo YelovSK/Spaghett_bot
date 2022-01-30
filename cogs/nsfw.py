@@ -5,7 +5,8 @@ import asyncio
 import praw
 import urllib.request
 
-from message_send import bot_send
+from helpers.message_send import bot_send
+from helpers import checks
 from disnake.ext import commands
 from disnake.ext.commands import Context
 from os.path import join as pjoin
@@ -21,6 +22,7 @@ class NSFW(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    @checks.is_trustworthy()
     async def fap(self, ctx: Context, *, folder=''):
         """Sends a fap image. Random folder or specified [folder].
 
@@ -45,6 +47,7 @@ class NSFW(commands.Cog):
             await bot_send(ctx, 'oopsie, failed to upload, error kodiQ: ' + str(error))
 
     @commands.command()
+    @checks.is_trustworthy()
     async def kawaii(self, ctx: Context, do=''):
         """Sends a kawaii image. Send with 'cum' to send every 4h or [image_name].
 

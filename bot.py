@@ -3,8 +3,9 @@ import disnake
 from platform import python_version
 from os import listdir
 from datetime import datetime
+from disnake.ext import commands
 from disnake.ext.commands import Bot
-from message_send import bot_send
+from helpers.message_send import bot_send
 
 with open("config.json") as cfg:
     config = json.load(cfg)
@@ -43,6 +44,19 @@ async def on_command_completion(ctx):
     command = ctx.command.qualified_name.split()[0]
     curr_time = datetime.now().strftime("%H:%M:%S")
     print(f"Executed {command} by {ctx.message.author} at {curr_time}")
+
+
+@bot.event
+async def on_command_error(ctx, error) -> None:
+    if isinstance(error, commands.MissingPermissions):
+        embed = disnake.Embed(
+            title="Error!",
+            description=f"Missing permissions: `{', '.join(error.missing_permissions)}`",
+            color=0xff0000
+        )
+        await ctx.send(embed=embed)
+    else:
+        print(error)
 
 
 def load_extensions():

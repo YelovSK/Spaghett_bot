@@ -8,7 +8,7 @@ import contextlib
 from io import StringIO
 from datetime import timezone
 from PyDictionary import PyDictionary
-from message_send import bot_send
+from helpers.message_send import bot_send
 from disnake.ext import commands
 from disnake.ext.commands import Bot
 from disnake.ext.commands import Context

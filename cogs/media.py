@@ -2,7 +2,8 @@ import disnake
 import random
 import os
 
-from message_send import bot_send
+from helpers.message_send import bot_send
+from helpers import checks
 from disnake.ext import commands
 from PIL import Image, ImageFont, ImageDraw
 from disnake.ext.commands import Context
@@ -156,6 +157,7 @@ class Media(commands.Cog):
             await self.send_video(ctx, f"{video}.mp4")
 
     @commands.command()
+    @checks.is_owner()
     async def text(self, ctx: Context, filename=''):
         """Sends a text file.
 

@@ -1,7 +1,7 @@
 import disnake
 import random
 
-from message_send import bot_send
+from helpers.message_send import bot_send
 from disnake.ext import commands
 from disnake.ext.commands import Context
 from os.path import join as pjoin

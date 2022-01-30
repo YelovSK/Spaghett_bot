@@ -8,7 +8,8 @@ import time
 import datetime
 from html.entities import name2codepoint
 from io import StringIO
-from message_send import bot_send
+from helpers.message_send import bot_send
+from helpers import checks
 from disnake.ext import commands
 from disnake.ext.commands import Context
 from collections import Counter
@@ -189,29 +190,23 @@ class Journal(commands.Cog):
         return res.getvalue()
 
     @commands.command()
+    @checks.is_owner()
     async def journal_find(self, ctx: Context, word: str):
         """Returns sentences containing <word> and its derivatives.
 
         Syntax: ```plz journal_find <word>```
         """
-        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
-            await bot_send(ctx, "Ain't your journal bro")
-            return
-
         if not self.loaded:
             self.load_entries()
         await bot_send(ctx, self.find_word(word, exact_match=False))
 
     @commands.command()
+    @checks.is_owner()
     async def journal_find_exact(self, ctx: Context, word: str):
         """Returns sentences containing <word>.
 
         Syntax: ```plz journal_find_exact <word>```
         """
-        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
-            await bot_send(ctx, "Ain't your journal bro")
-            return
-
         if not self.loaded:
             self.load_entries()
         await bot_send(ctx, self.find_word(word, exact_match=True))
@@ -229,29 +224,23 @@ class Journal(commands.Cog):
         await bot_send(ctx, f"The number of all occurrences (incl. variations) is {occurrences}")
 
     @commands.command()
+    @checks.is_owner()
     async def journal_random(self, ctx: Context):
         """Returns a random entry from the journal.
 
         Syntax: ```plz journal_random```
         """
-        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
-            await bot_send(ctx, "Ain't your journal bro")
-            return
-
         if not self.loaded:
             self.load_entries()
         await bot_send(ctx, self.get_random_day())
 
     @commands.command()
+    @checks.is_owner()
     async def journal_longest(self, ctx: Context):
         """Returns the longest entry from the journal.
 
         Syntax: ```plz journal_longest```
         """
-        if str(ctx.author)[:str(ctx.author).find("#")] != "Yelov":
-            await bot_send(ctx, "Ain't your journal bro")
-            return
-
         if not self.loaded:
             self.load_entries()
         await bot_send(ctx, self.get_longest_day())
