@@ -9,6 +9,7 @@ from io import StringIO
 from datetime import timezone
 from PyDictionary import PyDictionary
 from helpers.message_send import bot_send
+from helpers import checks
 from disnake.ext import commands
 from disnake.ext.commands import Bot
 from disnake.ext.commands import Context
@@ -29,47 +30,30 @@ class Misc(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def insult(self, ctx: Context, *, ping):
+    async def insult(self, ctx: Context, *, username):
         """Randomly generated insult. Argument is username, not nick.
 
         Syntax: ```plz insult <username>```
         Example: ```plz insult yomama```
         """
-        found = False
-        curr_user = str(ctx.author)[: str(ctx.author).find("#")]
-
-        for member in ctx.guild.members:
-            name = str(member)[: str(member).find("#")]
-            if ping.lower() == "spaghett bot":
-                if name == curr_user:
-                    name = member.id
-                    break
-            elif ping.lower() == name.lower():
-                name = member.id
-                found = True
-                break
-
-        if ping.lower() == "spaghett bot":
+        username = username.lower()
+        if username == ctx.author.name:
+            await bot_send(ctx, "Ye, same buddy, I also hate myself")
+            return
+        if username == "spaghett bot":
             with open(pjoin("folders", "text", "insult_bot_message.txt")) as f:
-                await bot_send(ctx, f.read().replace("*name*", f"<@{name}>"))
+                await bot_send(ctx, f.read().replace("*name*", ctx.author.mention))
                 return
-
-        for i in "nouns", "adjectives", "actions":
-            lines = open(pjoin("folders", "text", f"{i}.txt")).read().splitlines()
-            if i == "nouns":
-                nouns = lines
-            elif i == "adjectives":
-                adjectives = lines
-            elif i == "actions":
-                actions = lines
-
-        if not found:
-            await bot_send(ctx, "No such member. Dumb fuck.")
-        else:
-            adj = random.choice(adjectives)
-            noun = random.choice(nouns)
-            act = random.choice(actions)
-            await bot_send(ctx, f"<@{name}> go {act}, you {adj} {noun}.")
+        for member in ctx.guild.members:
+            if member.name.lower() == username:
+                with open(pjoin("folders", "text", "insults.json"), encoding="utf-8-sig") as f:
+                    insults = json.load(f)
+                adj = random.choice(insults["adjectives"])
+                noun = random.choice(insults["nouns"])
+                act = random.choice(insults["actions"])
+                await bot_send(ctx, f"{ctx.author.mention} go {act}, you {adj} {noun}.")
+                return
+        await bot_send(ctx, "No such member. Dumb fuck.")
 
     @commands.command()
     async def fuck(self, ctx: Context):
@@ -77,7 +61,8 @@ class Misc(commands.Cog):
 
         Syntax:```plz fuck```
         """
-        words = list(open(pjoin("folders", "text", "swear.txt")))
+        with open(pjoin("folders", "text", "swear.txt")) as f:
+            words = f.read().splitlines()
         await bot_send(ctx, random.choice(words))
 
     @commands.command()
@@ -170,35 +155,30 @@ class Misc(commands.Cog):
         await bot_send(ctx, "\n".join(out))
 
     @commands.command()
-    async def dict(self, ctx: Context, *, word_do=""):
-        """Dictionary.
+    async def dict(self, ctx: Context, *, word: str, action: str):
+        """Online dictionary for synonyms, antonyms and definitions.
 
         Syntax: ```plz dict <word> ["synonyms" / "antonyms" / "define"]```
         Example: ```plz dict sadness antonyms```
         """
-        if len(word_do.split()) != 2:
-            await bot_send(ctx, "What word am I supposed to find dumbo")
-            return
-
-        word, do = word_do.split()
         dictionary = PyDictionary()
         output = ""
-        if do == "define":
+        if action == "define":
             output += f"**Definitions of {word}**\n"
             definitions = dictionary.meaning(word)
             for type, meanings in definitions.items():
                 output += f"*{type}:*\n"
                 for meaning in meanings:
                     output += f"- {meaning}\n"
-        elif do in ("synonyms", "antonyms"):
-            if do == "synonyms":
+        elif action in ("synonyms", "antonyms"):
+            if action == "synonyms":
                 words = dictionary.synonym(word)
             else:
                 words = dictionary.antonym(word)
             if not words:
                 await bot_send(ctx, "Didn't find any words")
                 return
-            output += f"**{do.capitalize()} of {word}:** "
+            output += f"**{action.capitalize()} of {word}:** "
             for word in words:
                 output += f"{word}, "
             output = output[:-2]
@@ -209,12 +189,11 @@ class Misc(commands.Cog):
         """Shows weather info.
 
         Syntax: ```plz weather [info]```
-        Example: ```plz weather temperature``` ```plz weather in Bratislava```
+        Example: ```plz weather temperature``` ```plz weather in Tokyo```
         """
         owm = OWM(config["owm"])
         mgr = owm.weather_manager()
-        info = {}
-        info["location"] = specify[2:] if specify.startswith("in") else "Modra, SK"
+        info = {"location": specify[2:] if specify.startswith("in") else "Modra, SK"}
         try:
             place = mgr.weather_at_place(info["location"])
         except Exception as e:
@@ -229,20 +208,12 @@ class Misc(commands.Cog):
         info["sunrise"] = weather.sunrise_time(timeformat="date")
         info["sunset"] = weather.sunset_time(timeformat="date")
 
-        with open(pjoin("folders", "text", "weather_comment.txt")) as f:
-            comments = {}
-            for line in f:
-                line = line.strip()
-                if line[0] == "/":
-                    current = int(line[1:])
-                else:
-                    if current in comments:
-                        comments[current].append(line)
-                    else:
-                        comments[current] = [line]
-            temp_rounded = math.floor(temp)
-            if temp_rounded in comments:
-                info["temperature"] += f" (*{random.choice(comments[temp_rounded])}*)"
+        with open(pjoin("folders", "text", "weather_comment.json"), encoding="utf-8-sig") as f:
+            comments = json.load(f)
+
+        temp_rounded = math.floor(temp)
+        if temp_rounded in comments:
+            info["temperature"] += f" (*{random.choice(comments[temp_rounded])}*)"
 
         def utc_to_local(utc_dt):
             return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None).strftime("%X")
@@ -253,74 +224,75 @@ class Misc(commands.Cog):
         if not specify or specify.startswith("in"):
             out = "\n".join([f"**{key.capitalize()}:** {val}" for key, val in info.items()])
             await bot_send(ctx, out)
-        elif specify:
+        else:
             send = info[specify.lower()]
             await bot_send(ctx, f"""**{specify.capitalize()}:** {send}""")
 
     @commands.command()
-    async def word(self, ctx: Context, do="", *, word=""):
-        """Local dictionary.
+    async def word(self, ctx: Context):
+        """Local dictionary. Usage via prompts.
 
-        Syntax: ```plz word ["list" / "define" <word> / "add" <word> : <definition>]```
-        Example: ```plz word define hentai``` ```plz add chinchin : cute stick```
+        Syntax: ```plz word```
         """
-        dick = {}
-        if ":" in word:
-            word, definition = word.split(":")
-
+        await bot_send(ctx, "What do you want? [list / define / add]")
+        response = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+        answer = response.content
+        if answer not in ("list", "define", "add"):
+            await bot_send(ctx, "Invalid response")
+            return
         dictionary_path = pjoin("folders", "text", "dictionary.txt")
-        if not do:
-            await bot_send(ctx, '"list" / "define <word>" / "add <word : definition>"')
-        elif do in "add":
-            with open(dictionary_path) as file:
-                for line in file:
-                    index = line.find(":")
-                    dick[line[: index - 1]] = line[index + 2 :]
-
-            if word not in dick.keys():
-                with open(dictionary_path, "a") as file:
-                    file.write(f"{word}:{definition}\n")
-                    print(f"Added {word}")
-
-        elif do == "define":
-            with open(dictionary_path) as file:
-                for line in file:
-                    index = line.find(":")
-                    if line[: index - 1] == word:
-                        await bot_send(ctx, f"Definition of {word} -> {line[index+2:]}")
-
-        elif do == "list":
-            send = ""
-            with open(dictionary_path) as file:
-                for line in file:
-                    index = line.find(":")
-                    send += f"{line[:index-1]}\n"
-            await bot_send(ctx, send)
+        if answer == "list":
+            with open(dictionary_path) as f:
+                words = [line.split(" : ")[0] for line in f.read().splitlines()]
+            await bot_send(ctx, "\n".join(words))
+        elif answer == "define":
+            await bot_send(ctx, "Word to define:")
+            response = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+            word_find = response.content
+            with open(dictionary_path) as f:
+                for line in f:
+                    word, definition = line.strip().split(" : ")
+                    if word == word_find:
+                        await bot_send(ctx, definition)
+                        return
+            await bot_send(ctx, "Word not found")
+        elif answer == "add":
+            await bot_send(ctx, "Word to add:")
+            response = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+            word_add = response.content
+            await bot_send(ctx, "Definition:")
+            response = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+            definition_add = response.content
+            with open(dictionary_path, "a") as f:
+                f.write(f"{word_add} : {definition_add}\n")
 
     @commands.command()
-    async def findword(self, ctx: Context, where, part):
+    async def findword(self, ctx: Context, where: str, part: str):
         """Finds a word that begins/ends with <word_part>
 
         Syntax: ```plz findword <"begins"/"ends"> <word_part>```
-        Example: ```plz findword begins holocau```
+        Example: ```plz findword begins holo```  ```plz findword ends caust```
         """
         if where not in ("begins", "ends"):
             await bot_send(ctx, "Need to specify with begins/ends")
             return
-        output = []
+        words = set()
         with open(pjoin("folders", "text", "words_alpha.txt")) as f:
             for line in f:
-                line = line[:-1]
-                if where == "begins":
-                    if line[: len(part)] == part:
-                        output.append(line)
-                elif where == "ends":
-                    if line[len(line) - len(part) :] == part:
-                        output.append(line)
-        if not len(output):
-            await bot_send(ctx, "Didn't find any word")
+                words.add(line.strip())
+        found_words = []
+        if where == "begins":
+            for word in words:
+                if word.startswith(part):
+                    found_words.append(word)
+        elif where == "ends":
+            for word in words:
+                if word.endswith(part):
+                    found_words.append(word)
+        if found_words:
+            await bot_send(ctx, random.choice(found_words))
         else:
-            await bot_send(ctx, random.choice(output))
+            await bot_send(ctx, "Didn't find any word")
 
     @commands.command()
     async def no(self, ctx: Context):
@@ -352,7 +324,6 @@ class Misc(commands.Cog):
         Syntax: ```plz answer <question>```
         Example: ```plz answer is life worth living?```
         """
-        auth = str(ctx.author)[: str(ctx.author).find("#")]
         yes = (
             "for sure dawg",
             "you fucking bet",
@@ -388,12 +359,12 @@ class Misc(commands.Cog):
         )
         answers = (yes, maybe, no)
         await bot_send(
-            ctx, f"****{auth}:**** {question}\n****Answer:**** {random.choice(random.choice(answers))}"
+            ctx, f"**{ctx.author.name}:** {question}\n**Answer:** {random.choice(random.choice(answers))}"
         )
 
     @commands.command()
     async def cut(self, ctx: Context, *, message):
-        """Splits the mesage into multiple lines.
+        """Splits the message into multiple lines.
 
         Syntax: ```plz cut <text>```
         Example: ```plz cut good jokes mate real funny see you at FUCK YOUJ```
@@ -405,43 +376,35 @@ class Misc(commands.Cog):
 
     @commands.command()
     async def delete(self, ctx: Context, num=1):
-        """Deletes the last [num] messages. Set [num] to '-1' to delete all messages.
+        """Deletes the last [num] messages. Default is 1.
 
         Syntax: ```plz delete [num]```
         Example: ```plz delete``` ```plz delete 5```
         """
-        prev_messages = []
-        with open(pjoin("folders", "text", "prev_mssg_ids.txt")) as f:
-            for line in f.read().splitlines():
-                channel_id, mssg_id = line.split()
-                try:
-                    channel = self.bot.get_channel(int(channel_id))
-                    orig_mssg = await channel.fetch_message(int(mssg_id))
-                    prev_messages.append(orig_mssg)
-                except:
-                    print(f"Message with ID {mssg_id} was prolly already deleted")
-        if not prev_messages:
-            await ctx.send("No message history")
-            return
-        with open(pjoin("folders", "text", "prev_mssg_ids.txt"), "w") as f:  # to clear broken messages
-            for mssg in prev_messages:
-                f.write(f"{mssg.channel.id} {mssg.id}\n")
+        last_messages = await ctx.channel.history().flatten()
+        bot_messages = [mssg for mssg in last_messages if mssg.author == self.bot.user][:num]
+        print(f"Gonna delete {len(bot_messages)} messages")
+        for bot_message in bot_messages:
+            await bot_message.delete()
+        print(f"Deleted {len(bot_messages)} messages")
 
-        if num == -1:
-            await ctx.send(f"Type 'yes' if you want to delete {len(prev_messages)} messages.")
-            msg = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
-            if msg.content != "yes":
-                return
-            num = len(prev_messages)
+    @commands.command()
+    async def deleteuser(self, ctx: Context, num=1):
+        """Deletes the last [num] messages of a user. Default is 1.
+        Will get prompted to give username.
 
-        msg = await ctx.send(f"Deleting {num} messages")
-        for _ in range(num):
-            await prev_messages.pop().delete()
-            if not prev_messages:
-                break
-        with open(pjoin("folders", "text", "prev_mssg_ids.txt"), "w") as f:
-            f.write("\n".join([f"{mssg.channel.id} {mssg.id}" for mssg in prev_messages]))
-        await msg.delete()
+        Syntax: ```plz deleteuser [num]```
+        Example: ```plz deleteuser``` ```plz deleteuser 5```
+        """
+        await bot_send(ctx, "Give username:")
+        username_mssg: disnake.Message = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+        username = username_mssg.content
+        last_messages = await ctx.channel.history().flatten()
+        username_mssgs = [mssg for mssg in last_messages if mssg.author.name == username][:num]
+        print(f"Gonna delete {len(username_mssgs)} messages")
+        for user_mssg in username_mssgs:
+            await user_mssg.delete()
+        print(f"Deleted {len(username_mssgs)} messages")
 
     @commands.command()
     async def guess(self, ctx: Context, *, num):
@@ -502,27 +465,18 @@ class Misc(commands.Cog):
         Syntax: ```plz number <num>```
         Example: ```plz number 69```
         """
-        good = []
-        bad = []
-        with open(pjoin("folders", "text", "num_answers.txt")) as f:
-            adding_good = True
-            for line in f:
-                line = line[:-1]
-                if line == "bad":
-                    adding_good = False
-                elif line != "good":
-                    if adding_good:
-                        good.append(line)
-                    else:
-                        bad.append(line)
+        with open(pjoin("folders", "text", "num_answers.json"), encoding="utf-8-sig") as f:
+            responses = json.load(f)
         if not num.isnumeric():
             await bot_send(ctx, f'Ah yes, {num} - the perfect "num". Moron.')
             return
         num_int = int(num)
-        cis = random.randint(1, 100)
-        ans = random.choice(good) if num_int == cis else random.choice(bad)
-        await bot_send(ctx, f"Guessed {num}\n{ans}")
-        print(f"Guessed {num}, was {cis}")
+        random_num = random.randint(1, 100)
+        if num_int == random_num:
+            await bot_send(ctx, random.choice(responses["good"]))
+        else:
+            await bot_send(ctx, random.choice(responses["bad"]))
+            await bot_send(ctx, f"The number was {random_num}")
 
     @commands.command()
     async def randomword(self, ctx: Context):
@@ -530,10 +484,12 @@ class Misc(commands.Cog):
 
         Syntax: ```plz randomword```
         """
-        words = open(pjoin("folders", "text", "words_alpha.txt")).read().splitlines()
+        with open(pjoin("folders", "text", "words_alpha.txt")) as f:
+            words = f.read().splitlines()
         await bot_send(ctx, random.choice(words))
 
     @commands.command()
+    @checks.is_trustworthy()
     async def execute(self, ctx: Context, *, code):
         """Executes a piece of code.
 
@@ -571,9 +527,9 @@ class Misc(commands.Cog):
 
         Syntax: ```plz badbot```
         """
-        string = str(ctx.author)
-        string = string[: string.find("#")]
-        await bot_send(ctx, f"{string} go commit die")
+        await bot_send(ctx, "look at your stupid fucking ugly face")
+        await bot_send(ctx, ctx.author.avatar)
+        await bot_send(ctx, f"{ctx.author.mention} go commit die")
 
     @commands.command()
     async def goodbot(self, ctx: Context):
@@ -593,38 +549,25 @@ class Misc(commands.Cog):
         await bot_send(ctx, ctx.author.avatar.url)
 
     @commands.command()
-    async def sorry(self, ctx: Context, name=""):
+    async def sorry(self, ctx: Context, name):
         """Sends a heartfelt apology.
 
         Syntax: ```plz sorry <name>```
         Example: ```plz sorry Yelov```
         """
         curr_user = str(ctx.author)[: str(ctx.author).find("#")]
-        if not name:
-            await bot_send(ctx, "u r sorry to whom? dumbass")
-        elif name.lower() == "spaghett bot":
+        if name.lower() == "spaghett bot":
             await bot_send(ctx, "ye no problem bro")
-        elif name.lower() == curr_user.lower():
+        elif name.lower() == ctx.author.name.lower():
             await bot_send(ctx, "i'm sorry but the results came in - you're a narcissist")
         else:
-            found = False
             for member in ctx.guild.members:
-                name_d = str(member)[: str(member).find("#")]
-                print(name, name_d)
-                if name.lower() == name_d.lower():
-                    name_d = member.id
-                    found = True
-                    break
-            if not found:
-                await bot_send(
-                    ctx,
-                    """i'm sorry to user who doesn't exist.. 
-    or mby it was someone's nickname, but i deleted that cuz of some bug i can't be bothered to fix :)""",
-                )
-                return
-            with open(pjoin("folders", "text", "sry.txt")) as f:
-                send = f.readline()
-            await bot_send(ctx, f"<@{name_d}> {send}")
+                if name.lower() == member.name.lower():
+                    with open(pjoin("folders", "text", "sry.txt")) as f:
+                        send = f.read().replace("*", member.name)
+                    await bot_send(ctx, f"{member.mention}\n{send}")
+                    return
+            await bot_send(ctx, "Sorry to a non-existent user")
 
     @commands.command()
     async def epicshit(self, ctx: Context):

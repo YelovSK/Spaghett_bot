@@ -2,6 +2,8 @@ import json
 import disnake
 from platform import python_version
 from os import listdir
+from pathlib import Path
+from os.path import join as pjoin
 from datetime import datetime
 from disnake.ext import commands
 from disnake.ext.commands import Bot
@@ -9,7 +11,9 @@ from helpers.message_send import bot_send
 
 with open("config.json") as cfg:
     config = json.load(cfg)
-bot = Bot(command_prefix=config["prefix"])
+intents = disnake.Intents.default()
+intents.members = True
+bot = Bot(command_prefix=config["prefix"], intents=intents)
 bot.remove_command("help")
 
 
@@ -55,8 +59,13 @@ async def on_command_error(ctx, error) -> None:
             color=0xff0000
         )
         await ctx.send(embed=embed)
-    else:
-        print(error)
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(error)
+
+
+def check_folders():
+    for folder in ("assets", "imgs", "memes", "send/kawaii", "send/videos", "text"):
+        Path(pjoin("folders", folder)).mkdir(parents=True, exist_ok=True)
 
 
 def load_extensions():
@@ -69,5 +78,6 @@ def load_extensions():
 
 
 if __name__ == "__main__":
+    check_folders()
     load_extensions()
     bot.run(config["token"])

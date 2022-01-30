@@ -1,7 +1,6 @@
 import disnake
 import random
 import os
-import asyncio
 import praw
 import urllib.request
 
@@ -10,7 +9,6 @@ from helpers import checks
 from disnake.ext import commands
 from disnake.ext.commands import Context
 from os.path import join as pjoin
-from PIL import Image
 
 
 class NSFW(commands.Cog):
@@ -23,45 +21,41 @@ class NSFW(commands.Cog):
 
     @commands.command()
     @checks.is_trustworthy()
-    async def fap(self, ctx: Context, *, folder=''):
+    async def fap(self, ctx: Context, *, folder=""):
         """Sends a fap image. Random folder or specified [folder].
 
         Syntax: ```plz fap [folder]```
         Example: ```plz fap Asuka```
         """
-        if not folder:
+        if folder != "":
             with open(pjoin("folders", "text", "fap.txt")) as f:
                 folders = f.read().splitlines()
             folder = random.choice(folders)
 
         path = pjoin("F:\\Desktop start menu", "homework", folder)
         files = [f for f in os.listdir(path) if os.path.isfile(pjoin(path, f)) if
-                 os.path.getsize(pjoin(path, f)) < 8_000_000]
-        file_path = pjoin("folders", "send", "homework.png")
-        Image.open(pjoin(path, random.choice(files))).save(file_path)
-        file = disnake.File(file_path, filename=file_path)
+                 os.path.getsize(pjoin(path, f)) < 8_000_000]   # only files smaller than 8 MB
+        chosen_file = pjoin(path, random.choice(files))
+        file = disnake.File(chosen_file)
         await bot_send(ctx, f'****Folder:**** {folder}')
         try:
             await bot_send(ctx, file)
         except Exception as error:
-            await bot_send(ctx, 'oopsie, failed to upload, error kodiQ: ' + str(error))
+            await bot_send(ctx, f"oopsie, failed to upload, error kodiQ: {error}")
 
     @commands.command()
     @checks.is_trustworthy()
-    async def kawaii(self, ctx: Context, do=''):
-        """Sends a kawaii image. Send with 'cum' to send every 4h or [image_name].
+    async def kawaii(self, ctx: Context, image_name=""):
+        """Sends a kawaii image. Can send with [image_name].
 
-        Syntax: ```plz kawaii ["cum" / image_name]```
-        Example: ```plz kawaii``` ```plz kawaii cum``` ```plz kawaii 1bunt.jpg```
+        Syntax: ```plz kawaii [image_name]```
+        Example: ```plz kawaii``` ```plz kawaii 1bunt.jpg```
         """
-        channel = ctx.channel
-        if do == 'cum':
-            channel = self.bot.get_channel(680494725165219958)
 
-        if do and do != 'cum':
-            file = disnake.File(pjoin("folders", "send", "kawaii", do),
-                                filename=pjoin("folders", "send", "kawaii", do))
-            await bot_send(channel, file)
+        if image_name != "":
+            file = disnake.File(pjoin("folders", "send", "kawaii", image_name),
+                                filename=pjoin("folders", "send", "kawaii", image_name))
+            await bot_send(ctx, file)
             return
 
         with open(pjoin("folders", "text", "pseudorandom_kawaii.txt")) as f:
@@ -76,17 +70,11 @@ class NSFW(commands.Cog):
                 f.write(img)
             f.write(f'{choice}\n')
 
-        save = pjoin("folders", "send", "kawaii.png")
-        Image.open(pjoin(path, choice)).save(save)
-        file = disnake.File(save, filename=save)
         try:
-            await bot_send(channel, file)
+            await bot_send(ctx, disnake.File(pjoin(path, choice)))
         except Exception as error:
-            await bot_send(channel, 'oopsie, failed to upload kawaii')
+            await bot_send(ctx, "oopsie, failed to upload kawaii")
             print(str(error) + '\n' + choice)
-        if do:
-            await asyncio.sleep(3600 * 4)
-            await self.kawaii(ctx, 'cum')
 
     @commands.command()
     async def reddit(self, ctx: Context, sub, text=None):
@@ -109,30 +97,25 @@ class NSFW(commands.Cog):
         posts = [post for post in subreddit.hot(limit=10) if not post.stickied]
         random.shuffle(posts)
 
-        if text == 'text':
-            for post in posts:
-                try:
-                    if post.selftext:
-                        await bot_send(ctx,
-                                       f'****Subreddit:**** r/{sub}\n****Title:**** {post.title}\n{post.ups}⇧ | {post.downs}⇩ \n\n{post.selftext}')
-                        return
-                except Exception as e:
-                    print(e)
-            await bot_send(ctx, 'No post with selftext.')
+        if text == "text":
+            posts = [post for post in posts if post.selftext]
+            if not posts:
+                await bot_send(ctx, "No post with selftext.")
+                return
+            await bot_send(ctx, f"**Subreddit**: r/{sub}")
+            await bot_send(ctx, f"**Title**: {posts[0].title}")
+            await bot_send(ctx, f"{posts[0].ups}⇧ | {posts[0].downs}⇩ \n\n{posts[0].selftext}") 
             return
 
         for post in posts:
             url = post.url
-            ext = url[-4:]
-            if ext in (".jpg", ".png"):
+            if url.endswith(".jpg") or url.endswith(".png"):
                 urllib.request.urlretrieve(url, pjoin("folders", "send", "reddit.png"))
-                break
-            if post == posts[-1]:
-                await bot_send(ctx, "*Couldn't find an image.*")
+                await bot_send(ctx, f"**Subreddit**: r/{sub}")
+                await bot_send(ctx, f"**Title**: {post.title}")
+                await bot_send(ctx, disnake.File(pjoin("folders", "send", "reddit.png")))
                 return
-        await bot_send(ctx, f'****Subreddit****: r/{sub}')
-        await bot_send(ctx,
-                       disnake.File(pjoin("folders", "send", "reddit.png"), pjoin("folders", "send", "reddit.png")))
+        await bot_send(ctx, "*Couldn't find an image.*")
 
     @commands.command()
     async def coomer(self, ctx: Context):
@@ -140,9 +123,9 @@ class NSFW(commands.Cog):
 
         Syntax: ```plz coomer```
         """
-        subreddit = random.choice(["petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
+        subreddit = random.choice(("petitegonewild", "gonewild", "shorthairedwaifus", "zettairyouiki", "hentai",
                                    "asiansgonewild", "averageanimetiddies", "upskirthentai", "thighhighs", "rule34",
-                                   "chiisaihentai"])
+                                   "chiisaihentai"))
 
         await self.reddit(ctx, subreddit)
 

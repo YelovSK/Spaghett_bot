@@ -10,7 +10,6 @@ max_message_length = 1950
 async def bot_send(ctx: Context, mssg: str | disnake.File) -> None:
     """
     Splits messages if they are longer than the character limit.
-    Adds messages to a text file so they can be deleted later.
     """
     if isinstance(mssg, disnake.File):
         sent_mssg = await ctx.send(file=mssg)
@@ -20,7 +19,6 @@ async def bot_send(ctx: Context, mssg: str | disnake.File) -> None:
         return
     else:
         sent_mssg = await ctx.send(mssg)
-    add_message_to_history(sent_mssg)
 
 
 def split_long(text: str) -> list[str]:
@@ -58,17 +56,3 @@ def find_formatting_characters(text: str) -> str | None:
         if len(matches) % 2 != 0:
             return matches[0]
     return None
-
-
-def add_message_to_history(message: disnake.Message) -> None:
-    """
-    Need <message.channel.id> and <message.id> to get the message object.
-    """
-    with open(pjoin("folders", "text", "prev_mssg_ids.txt")) as f:
-        curr_mssgs = f.read().splitlines()
-    message_history = 25
-    if len(curr_mssgs) > message_history:
-        curr_mssgs = curr_mssgs[-message_history:]
-    curr_mssgs.append(f"{message.channel.id} {message.id}")
-    with open(pjoin("folders", "text", "prev_mssg_ids.txt"), "w") as f:
-        f.write("\n".join(curr_mssgs))
