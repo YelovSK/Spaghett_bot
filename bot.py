@@ -1,4 +1,6 @@
 import json
+import time
+
 import disnake
 from platform import python_version
 from os import listdir
@@ -66,12 +68,22 @@ async def on_command_error(ctx, error) -> None:
 
 @bot.event
 async def on_presence_update(before: disnake.Member, after: disnake.Member):
-    channel = bot.get_channel(849398074145374238)   # general_text
-    if before.guild != channel.guild:
+    channel = bot.get_channel(config["main_guild"])  # general_text
+    if before.guild != channel.guild:   # check only in the main guild (a member can be in multiple channels)
         return
     bad_games = ("league of legends")
     if after.activity and after.activity.name.lower() in bad_games:
-        await bot_send(channel, f"{before.mention} stop playing that shit")
+        await bot_send(channel, f"beware, {before.mention} just launched {after.activity.name}, yikes")
+        await activity_timer(member=after, channel=channel, timeout=30)
+
+
+async def activity_timer(member: disnake.Member, channel, timeout: int):
+    """checks if the activity hasn't changed for <timeout> minutes"""
+    start_activity: disnake.Activity = member.activity
+    time.sleep(timeout * 60)
+    if member.activity == start_activity:
+        await bot_send(channel, f"{member.mention} still playing {member.activity.name} after {timeout} minutes :feelsweird:")
+        # await member.ban(delete_message_days=0, reason=f"playing {member.activity.name}")   # (:
 
 
 def check_folders():
