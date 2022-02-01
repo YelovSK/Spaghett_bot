@@ -1,14 +1,24 @@
 {
-  "prefix": "plz ",
-  "token": "",
-  "owner": 322,
-  "trusted": [1, 2, 3],
-  "openai": "",
-  "owm": "",
-  "spotify-id": "",
-  "spotify-secret": "",
-  "tensorbox": "",
-  "ai21": "",
-  "huggingface": "",
-  "diary.db path": ""
+   "prefix":"plz ",
+   "token":"",
+   "ids":{
+      "owner":123,
+      "trusted":[
+         124,
+         125
+      ],
+      "main_guild":12345
+   },
+   "keys":{
+      "openai":"",
+      "owm":"",
+      "spotify-id":"",
+      "spotify-secret":"",
+      "tensorbox":"",
+      "ai21":"",
+      "huggingace":""
+   },
+   "misc":{
+      "diary.db path":""
+   }
 }
