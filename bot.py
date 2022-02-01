@@ -1,6 +1,5 @@
 import json
 import time
-
 import disnake
 from platform import python_version
 from os import listdir
@@ -64,12 +63,14 @@ async def on_command_error(ctx, error) -> None:
         await ctx.send(embed=embed)
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send(error)
+    else:
+        raise error
 
 
 @bot.event
 async def on_presence_update(before: disnake.Member, after: disnake.Member):
-    channel = bot.get_channel(config["ids"]["main_guild"])  # general_text
-    if before.guild != channel.guild:   # check only in the main guild (a member can be in multiple channels)
+    channel = bot.get_channel(config["ids"]["main_guild"])
+    if before.guild != channel.guild:   # check only in the main guild (a member can be in multiple guilds)
         return
     bad_games = ("league of legends")
     if after.activity and after.activity.name.lower() in bad_games:
