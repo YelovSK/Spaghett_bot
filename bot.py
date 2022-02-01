@@ -13,6 +13,7 @@ with open("config.json") as cfg:
     config = json.load(cfg)
 intents = disnake.Intents.default()
 intents.members = True
+intents.presences = True
 bot = Bot(command_prefix=config["prefix"], intents=intents)
 bot.remove_command("help")
 
@@ -61,6 +62,16 @@ async def on_command_error(ctx, error) -> None:
         await ctx.send(embed=embed)
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send(error)
+
+
+@bot.event
+async def on_presence_update(before: disnake.Member, after: disnake.Member):
+    channel = bot.get_channel(849398074145374238)   # general_text
+    if before.guild != channel.guild:
+        return
+    bad_games = ("league of legends")
+    if after.activity and after.activity.name.lower() in bad_games:
+        await bot_send(channel, f"{before.mention} stop playing that shit")
 
 
 def check_folders():
