@@ -1,8 +1,10 @@
 {
   "prefix": "plz ",
   "token": "",
+  "permissions": 123,
   "owner": 322,
   "trusted": [1, 2, 3],
+  "main_guild": 123,
   "openai": "",
   "owm": "",
   "spotify-id": "",
