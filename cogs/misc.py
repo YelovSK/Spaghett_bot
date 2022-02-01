@@ -4,10 +4,10 @@ import math
 import json
 import sys
 import contextlib
+import wordhoard
 
 from io import StringIO
 from datetime import timezone
-from PyDictionary import PyDictionary
 from helpers.message_send import bot_send
 from helpers import checks
 from disnake.ext import commands
@@ -155,26 +155,23 @@ class Misc(commands.Cog):
         await bot_send(ctx, "\n".join(out))
 
     @commands.command()
-    async def dict(self, ctx: Context, *, word: str, action: str):
+    async def dict(self, ctx: Context, word: str, action: str):
         """Online dictionary for synonyms, antonyms and definitions.
 
         Syntax: ```plz dict <word> ["synonyms" / "antonyms" / "define"]```
         Example: ```plz dict sadness antonyms```
         """
-        dictionary = PyDictionary()
         output = ""
         if action == "define":
-            output += f"**Definitions of {word}**\n"
-            definitions = dictionary.meaning(word)
-            for type, meanings in definitions.items():
-                output += f"*{type}:*\n"
-                for meaning in meanings:
-                    output += f"- {meaning}\n"
+            definitions = wordhoard.Definitions(word).find_definitions()
+            output += f"Definitions of **{word}**\n"
+            for definition in definitions:
+                output += f"- {definition}\n"
         elif action in ("synonyms", "antonyms"):
             if action == "synonyms":
-                words = dictionary.synonym(word)
+                words = wordhoard.Synonyms(word).find_synonyms()
             else:
-                words = dictionary.antonym(word)
+                words = wordhoard.Antonyms(word).find_antonyms()
             if not words:
                 await bot_send(ctx, "Didn't find any words")
                 return

@@ -33,8 +33,8 @@ class Colour(commands.Cog):
         img = Image.new(mode="RGB", size=(400, 400), color=(r, g, b))
         img.save(self.colour_path)
         await bot_send(ctx, disnake.File(self.colour_path, filename="colour.jpg"))
-        await bot_send(ctx, "Give name (or 'no' to exit'):")
-        response = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author)
+        await bot_send(ctx, "Give name (or 'no' to exit, timeout 10s):")
+        response = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author, timeout=10)
         name = response.content
         if name.lower() == "no":
             sad_answers = ("rude", "pff, k", "the color is crying, u happy?", "'no' deez nuts")
