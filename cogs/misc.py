@@ -1,3 +1,5 @@
+import os
+import re
 import disnake
 import random
 import math
@@ -15,7 +17,6 @@ from disnake.ext.commands import Bot
 from disnake.ext.commands import Context
 from os.path import join as pjoin
 from pyowm.owm import OWM
-
 
 with open("config.json") as cfg:
     config = json.load(cfg)
@@ -148,8 +149,8 @@ class Misc(commands.Cog):
             if guess_count == 0:
                 continue
             if name == curr_user or everyone == "all":
-                max = round(twenty_count/guess_count*100, 2)
-                avg = round(total_sum/guess_count, 2)
+                max = round(twenty_count / guess_count * 100, 2)
+                avg = round(total_sum / guess_count, 2)
                 curr_name = name[:name.find("#")]
                 out.append(f"""{curr_name}: MAX - {max}% | AVG - {avg} | ALL - {guess_count}""")
         await bot_send(ctx, "\n".join(out))
@@ -432,9 +433,9 @@ class Misc(commands.Cog):
         if int(current) == int(num):
             await bot_send(
                 ctx,
-                f"""Guessed in {int(guesses)+1}
+                f"""Guessed in {int(guesses) + 1}
     tries\n{curr_user[:curr_user.find("#")]} guessed correctly
-    {users[curr_user]+1} times""",
+    {users[curr_user] + 1} times""",
             )
             change = True
 
@@ -453,7 +454,7 @@ class Misc(commands.Cog):
         else:
             await bot_send(ctx, "Lower")
         with open(pjoin("folders", "text", "guess.txt"), "w") as file:
-            file.write(f"{current}\n{int(guesses)+1}")
+            file.write(f"{current}\n{int(guesses) + 1}")
 
     @commands.command()
     async def number(self, ctx: Context, *, num):
@@ -596,6 +597,29 @@ class Misc(commands.Cog):
                 await bot_send(ctx, f"there was no '{msg.content}' option you moron, get slapped *slaps*")
         else:
             await bot_send(ctx, "you stupid fuck, that's not [yes/no]")
+
+    @commands.command()
+    async def showcode(self, ctx: Context, function_name: str):
+        """Show code of <function_name>.
+
+        Syntax: ```plz showcode <function_name>```
+        Example: ```plz showcode fuck```
+        """
+        files_content = StringIO()
+        for file in [os.path.join("cogs", f) for f in os.listdir("cogs")] + ["helpers/checks.py", "helpers/message_send.py", "bot.py"]:
+            if not file.endswith(".py"):
+                continue
+            with open(file, encoding="utf-8") as f:
+                files_content.write(f.read())
+        files_content = files_content.getvalue()
+        function_regex = rf"(?s)(?<=def {function_name}\().*?(?=@|def)"   # def <function>( -> @ | def
+        matches = re.findall(function_regex, files_content)
+        if not matches:
+            await bot_send(ctx, "Function not found")
+            return
+        result = matches[0].strip().replace("```", "'''")   # ``` breaks formatting
+        output = "```Python\n" + f"def {function_name}(" + result + "\n```"
+        await bot_send(ctx, output)
 
 
 def setup(bot):
