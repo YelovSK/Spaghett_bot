@@ -68,7 +68,7 @@ async def on_command_error(ctx, error) -> None:
 
 @bot.event
 async def on_presence_update(before: disnake.Member, after: disnake.Member):
-    channel = bot.get_channel(config["main_guild"])  # general_text
+    channel = bot.get_channel(config["ids"]["main_guild"])  # general_text
     if before.guild != channel.guild:   # check only in the main guild (a member can be in multiple channels)
         return
     bad_games = ("league of legends")

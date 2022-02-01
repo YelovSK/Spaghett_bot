@@ -139,7 +139,7 @@ class Journal(commands.Cog):
 
     @staticmethod
     def get_entries_from_db() -> list[str]:
-        database_path = config["diary.db path"]
+        database_path = config["misc"]["diary.db path"]
         con = sqlite3.connect(database_path)
         entries = con.cursor().execute("SELECT Text, DiaryEntryId FROM Entries").fetchall()
         con.close()

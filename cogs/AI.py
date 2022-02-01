@@ -24,7 +24,7 @@ async def ai(
         presence_penalty,
         stop=None,
 ):
-    openai.api_key = config["openai"]
+    openai.api_key = config["keys"]["openai"]
     response = openai.Completion.create(
         engine=engine,
         prompt=prompt,
@@ -178,7 +178,7 @@ class AI(commands.Cog):
         if input_text[: len("model=")] == "model=":
             model = input_text.split()[0].split("=")[1]
         mssg = await ctx.send("generating, gimme a sec..")
-        headers = {"Authorization": f"Bearer {config['huggingface']}"}
+        headers = {"Authorization": f"Bearer {config['keys']['huggingface']}"}
         API_URL = f"https://api-inference.huggingface.co/models/{model}"
         payload = {
             "inputs": input_text,
@@ -204,7 +204,7 @@ class AI(commands.Cog):
         mssg = await ctx.send("generating, gimme a sec..")
         res = requests.post(
             "https://api.ai21.com/studio/v1/j1-jumbo/complete",
-            headers={"Authorization": f"Bearer {config['ai21']}"},
+            headers={"Authorization": f"Bearer {config['keys']['ai21']}"},
             json={
                 "prompt": input_text,
                 "numResults": 1,

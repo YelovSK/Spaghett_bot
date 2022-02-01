@@ -3,7 +3,7 @@ espnet
 openai
 Pillow
 praw
-PyDictionary
+wordhoard
 pyowm
 requests
 rich

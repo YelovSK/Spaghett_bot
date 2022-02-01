@@ -44,7 +44,7 @@ class Music(commands.Cog):
             ],
         }
         spotify_credentials = SpotifyClientCredentials(
-            client_id=config["spotify-id"], client_secret=config["spotify-secret"]
+            client_id=config["keys"]["spotify-id"], client_secret=config["keys"]["spotify-secret"]
         )
         self.sp = Spotify(auth_manager=spotify_credentials)
 
