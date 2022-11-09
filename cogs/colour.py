@@ -1,12 +1,13 @@
-import disnake
-import random
 import os
+import random
+from os.path import join as pjoin
 
-from helpers.message_send import bot_send
+import disnake
+from PIL import Image
 from disnake.ext import commands
 from disnake.ext.commands import Context
-from os.path import join as pjoin
-from PIL import Image
+
+from helpers.message_send import bot_send
 
 
 class Colour(commands.Cog):
@@ -19,9 +20,10 @@ class Colour(commands.Cog):
         self.curr_colour = None
         self.file_path = pjoin("folders", "text", "colours.txt")
         self.colour_path = pjoin("folders", "send", "colour.jpg")
+
         if not os.path.exists(self.file_path):
-            with open(self.file_path) as f:
-                pass
+            with open(self.file_path, "w") as f:
+                f.write("")
 
     @commands.command()
     async def colour(self, ctx: Context):
@@ -30,9 +32,12 @@ class Colour(commands.Cog):
         Syntax: ```plz colour```
         """
         r, g, b = random.randrange(256), random.randrange(256), random.randrange(256)
+
         img = Image.new(mode="RGB", size=(400, 400), color=(r, g, b))
         img.save(self.colour_path)
+
         await bot_send(ctx, disnake.File(self.colour_path, filename="colour.jpg"))
+
         await bot_send(ctx, "Give name (or 'no' to exit, timeout 10s):")
         response = await self.bot.wait_for("message", check=lambda m: m.author == ctx.author, timeout=10)
         name = response.content
@@ -40,6 +45,7 @@ class Colour(commands.Cog):
             sad_answers = ("rude", "pff, k", "the color is crying, u happy?", "'no' deez nuts")
             await bot_send(ctx, random.choice(sad_answers))
             return
+
         with open(self.file_path, 'a') as f:
             f.write(f'{r} {g} {b} : {name}\n')
 
@@ -52,7 +58,7 @@ class Colour(commands.Cog):
         await bot_send(ctx, "\n".join(self.get_names_cols_map().keys()))
 
     @commands.command()
-    async def showcolour(self, ctx: Context, *, name):
+    async def showcolour(self, ctx: Context, *, name: str):
         """Shows a colour with the given name.
 
         Syntax: ```plz showcolour <name>```
@@ -62,14 +68,16 @@ class Colour(commands.Cog):
         if name not in colours.keys():
             await bot_send(ctx, "Colour not found")
             return
+
         r, g, b = [int(c) for c in colours[name].split()]
         img = Image.new('RGB', (400, 400), (r, g, b))
         img.save(self.colour_path)
+
         await bot_send(ctx, disnake.File(self.colour_path,
                                          self.colour_path))
 
     @commands.command()
-    async def deletecolour(self, ctx: Context, *, name):
+    async def deletecolour(self, ctx: Context, *, name: str):
         """Deletes a colour with the given name.
 
         Syntax: ```plz deletecolour <name>```
@@ -79,18 +87,22 @@ class Colour(commands.Cog):
         if name not in colours.keys():
             await ctx.send("Colour not found")
             return
+
         del colours[name]
+
         with open(self.file_path, "w") as f:
             for curr_name, curr_colour in colours.items():
                 f.write(f"{curr_colour} : {curr_name}\n")
+
         await ctx.send(f"Deleted '{name}'")
 
     def get_names_cols_map(self) -> dict[str, str]:
-        res = {}
         with open(self.file_path) as f:
+            res = {}
             for line in f:
                 col, name = line.strip().split(" : ")
                 res[name] = col
+
         return res
 
 

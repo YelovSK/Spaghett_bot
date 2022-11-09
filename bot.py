@@ -1,20 +1,25 @@
+import asyncio
 import json
-import time
-import disnake
-from platform import python_version
-from os import listdir
-from pathlib import Path
-from os.path import join as pjoin
 from datetime import datetime
+from os import listdir
+from os.path import join as pjoin
+from pathlib import Path
+from platform import python_version
+
+import disnake
 from disnake.ext import commands
 from disnake.ext.commands import Bot
+
 from helpers.message_send import bot_send
 
 with open("config.json") as cfg:
     config = json.load(cfg)
+
 intents = disnake.Intents.default()
 intents.members = True
 intents.presences = True
+intents.message_content = True
+
 bot = Bot(command_prefix=config["prefix"], intents=intents)
 bot.remove_command("help")
 
@@ -63,6 +68,8 @@ async def on_command_error(ctx, error) -> None:
         await ctx.send(embed=embed)
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send(error)
+    elif isinstance(error, commands.errors.BadBoolArgument):
+        await ctx.send(f"'{error.argument}' is not a valid boolean value (True/False | 0/1 | t/f | y/n)")
     else:
         raise error
 
@@ -70,20 +77,22 @@ async def on_command_error(ctx, error) -> None:
 @bot.event
 async def on_presence_update(before: disnake.Member, after: disnake.Member):
     channel = bot.get_channel(config["ids"]["main_guild"])
-    if before.guild != channel.guild:   # check only in the main guild (a member can be in multiple guilds)
+    if before.guild != channel.guild:  # check only in the main guild (a member can be in multiple guilds)
         return
+
     bad_games = ("league of legends")
-    if after.activity and after.activity.name.lower() in bad_games:
-        await bot_send(channel, f"beware, {before.mention} just launched {after.activity.name}, yikes")
-        await activity_timer(member=after, channel=channel, timeout=30)
+
+    if before.activity is None and after.activity and after.activity.name.lower() in bad_games:
+        print(f"{before.name} started playing {after.activity.name}")
+        await activity_timer(member=after, channel=channel, timeout=60)
 
 
 async def activity_timer(member: disnake.Member, channel, timeout: int):
     """checks if the activity hasn't changed for <timeout> minutes"""
     start_activity: disnake.Activity = member.activity
-    time.sleep(timeout * 60)
+    await asyncio.sleep(timeout * 60)
     if member.activity == start_activity:
-        await bot_send(channel, f"{member.mention} still playing {member.activity.name} after {timeout} minutes :feelsweird:")
+        await bot_send(channel, f"{member.mention} still playing {member.activity.name} after {timeout} minutes <:feelsweird:528683395249864753>")
         # await member.ban(delete_message_days=0, reason=f"playing {member.activity.name}")   # (:
 
 

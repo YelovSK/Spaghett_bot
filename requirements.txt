@@ -12,3 +12,4 @@ spotipy
 youtube_search_python
 yt_dlp
 wordhoard
+dalle2

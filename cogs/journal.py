@@ -1,43 +1,22 @@
 from __future__ import annotations
+
 import json
 import os
 import random
-import re
 import sqlite3
 import time
-import datetime
-from html.entities import name2codepoint
+from collections import Counter
 from io import StringIO
-from helpers.message_send import bot_send
-from helpers import checks
+
 from disnake.ext import commands
 from disnake.ext.commands import Context
-from collections import Counter
+
+from helpers import checks
+from helpers.helper_methods import *
+from helpers.message_send import bot_send
 
 with open("config.json") as cfg:
     config = json.load(cfg)
-
-
-def decode_entities(text: str) -> str:
-    def unescape(match):
-        code = match.group(1)
-        if code:
-            return chr(int(code, 10))
-        code = match.group(2)
-        if code:
-            return chr(int(code, 16))
-        code = match.group(3)
-        if code in name2codepoint:
-            return chr(name2codepoint[code])
-        return match.group(0)
-
-    entity_pattern = re.compile(r"&(?:#(\d+)|#x([\da-fA-F]+)|([a-zA-Z]+));")
-    return entity_pattern.sub(unescape, text)
-
-
-def get_date_from_tick(ticks: int) -> str:
-    date = datetime.datetime(1, 1, 1) + datetime.timedelta(microseconds=ticks // 10)
-    return date.strftime(r"%d.%m.%Y")
 
 
 class Finder:
@@ -66,14 +45,17 @@ class Finder:
     def _find_word_in_file(self, entry: tuple[str, str], word: str) -> str:
         file_output = StringIO()
         date, text = entry
+
         sentences = self.split_text_into_sentences(text)
         sentences_containing_word = [s for s in sentences if self._is_word_in_sentence(s, word)]
         if not sentences_containing_word:
             return file_output.getvalue()
+
         file_output.write(date + "\n")
         for sentence in sentences_containing_word:
             file_output.write(self._find_word_in_sentence(sentence, word) + "\n")
         file_output.write("\n")
+
         return file_output.getvalue()
 
     @staticmethod
@@ -84,12 +66,14 @@ class Finder:
     def _find_word_in_sentence(self, sentence: str, word: str) -> str:
         sentence_output = StringIO()
         highlight_style = "**"
+
         for curr_word in sentence.split():
             if self._is_the_same_word(curr_word, word):
                 self.occurrences += 1
                 sentence_output.write(f"{highlight_style}{curr_word}{highlight_style} ")
             else:
                 sentence_output.write(f"{curr_word} ")
+
         return sentence_output.getvalue()
 
     def _is_word_in_sentence(self, sentence: str, word: str) -> bool:
@@ -105,8 +89,10 @@ class Finder:
             word1, word2 = word2, word1
         if len(word1) - len(word2) >= len(word2):
             return False
+
         word1 = word1.lower()
         word2 = word2.lower()
+
         return word2 in word1
 
 
@@ -159,10 +145,9 @@ class Journal(commands.Cog):
 
     def get_english_word_count(self) -> int:
         # not accurate cuz a word can be both Slovak and English and I don't have a database of Slovak words to compare
-        english_words = set()
         with open(os.path.join("folders", "text", "words_alpha.txt")) as f:
-            for line in f:
-                english_words.add(line.strip())
+            english_words = set(f.read().splitlines())
+
         return sum(count for word, count in self.word_count_map.items() if word in english_words)
 
     def get_entry_from_date(self, date: str) -> str | None:
@@ -183,10 +168,12 @@ class Journal(commands.Cog):
         start = time.time()
         output, occurrences = Finder(self.entries_map).find_and_get_output(word, exact_match)
         took_time = round(time.time() - start, 2)
+
         res = StringIO()
         res.write(output)
         res.write(f"\nThe word {word} was found {occurrences} times")
         res.write(f"\nSearched through {self.get_total_word_count()} words in {took_time}s")
+
         return res.getvalue()
 
     @commands.command()
@@ -198,6 +185,7 @@ class Journal(commands.Cog):
         """
         if not self.loaded:
             self.load_entries()
+
         await bot_send(ctx, self.find_word(word, exact_match=False))
 
     @commands.command()
@@ -209,6 +197,7 @@ class Journal(commands.Cog):
         """
         if not self.loaded:
             self.load_entries()
+
         await bot_send(ctx, self.find_word(word, exact_match=True))
 
     @commands.command()
@@ -219,6 +208,7 @@ class Journal(commands.Cog):
         """
         if not self.loaded:
             self.load_entries()
+
         await bot_send(ctx, f"The exact match of word '{word}' was found {self.get_word_occurrences(word)} times")
         occurrences = Finder(self.entries_map).find_and_get_occurrences(word=word, exact_match=False)
         await bot_send(ctx, f"The number of all occurrences (incl. variations) is {occurrences}")
@@ -232,6 +222,7 @@ class Journal(commands.Cog):
         """
         if not self.loaded:
             self.load_entries()
+
         await bot_send(ctx, self.get_random_day())
 
     @commands.command()
@@ -243,6 +234,7 @@ class Journal(commands.Cog):
         """
         if not self.loaded:
             self.load_entries()
+
         await bot_send(ctx, self.get_longest_day())
 
     @commands.command()
@@ -253,11 +245,13 @@ class Journal(commands.Cog):
         """
         if not self.loaded:
             self.load_entries()
+
         result = StringIO()
         result.write(f"Entries: {len(self.entries_map)}\n")
         result.write(f"Words: {self.get_total_word_count()}\n")
         result.write(f"Unique words: {self.get_unique_word_count()}\n")
         result.write(str(self.get_most_frequent_words(10)))
+
         await bot_send(ctx, result.getvalue())
 
 

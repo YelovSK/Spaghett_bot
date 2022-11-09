@@ -1,8 +1,9 @@
 from __future__ import annotations
-from os.path import join as pjoin
-from disnake.ext.commands import Context
-import disnake
+
 import re
+
+import disnake
+from disnake.ext.commands import Context
 
 max_message_length = 1950
 
@@ -12,17 +13,17 @@ async def bot_send(ctx: Context, mssg: str | disnake.File) -> None:
     Splits messages if they are longer than the character limit.
     """
     if isinstance(mssg, disnake.File):
-        sent_mssg = await ctx.send(file=mssg)
+        await ctx.send(file=mssg)
     elif len(mssg) > max_message_length:
         for m in split_long(mssg):
             await bot_send(ctx, m)
-        return
     else:
-        sent_mssg = await ctx.send(mssg)
+        await ctx.send(mssg)
 
 
 def split_long(text: str) -> list[str]:
-    mssgs = []
+    messages = []
+
     while text != "":
         curr_mssg = text[:max_message_length]
         text = text[max_message_length:]
@@ -30,8 +31,9 @@ def split_long(text: str) -> list[str]:
         if formatting_char is not None:
             curr_mssg += formatting_char
             text = formatting_char + text
-        mssgs.append(curr_mssg)
-    return mssgs
+        messages.append(curr_mssg)
+
+    return messages
 
 
 def find_formatting_characters(text: str) -> str | None:
@@ -42,7 +44,7 @@ def find_formatting_characters(text: str) -> str | None:
     and return it, so that I can add it to the end of the current message
     and to the beginning of the next message.
     """
-    markdown_expressions = [    # ordered from most common to least common for performance
+    markdown_expressions = [  # ordered from most common to least common for performance
         r"\b[*]\b",  # * -> italics
         r"\b[*]{2}\b",  # ** -> bold
         r"\b[_]\b",  # _ -> italics
@@ -55,4 +57,5 @@ def find_formatting_characters(text: str) -> str | None:
         matches = re.findall(expression, text)
         if len(matches) % 2 != 0:
             return matches[0]
+
     return None

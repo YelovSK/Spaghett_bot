@@ -1,14 +1,17 @@
 import json
+from os.path import join as pjoin
+
+import disnake
 import openai
 import requests
 import soundfile as sf
-
-from helpers.message_send import bot_send
+from dalle2 import Dalle2
 from disnake import File
 from disnake.ext import commands
 from disnake.ext.commands import Context
-from os.path import join as pjoin
 from espnet2.bin.tts_inference import Text2Speech
+
+from helpers.message_send import bot_send
 
 with open("config.json") as cfg:
     config = json.load(cfg)
@@ -243,6 +246,22 @@ class AI(commands.Cog):
             "PCM_16",
         )
         await bot_send(ctx, File(pjoin("folders", "send", "text2speech.waw")))
+
+    @commands.command()
+    async def dalle(self, ctx: Context, *, input_text):
+        """Sends generated images from DALL-E 2.
+
+        Syntax: ```plz dalle <text>```
+        """
+        bearer = config["keys"]["dalle2"]
+        dalle = Dalle2(f"sess-{bearer}")
+        await bot_send(ctx, "Generating...")
+        generations = dalle.generate(input_text)
+        await bot_send(ctx, "Downloading...")
+        file_paths = dalle.download(generations, image_dir="dalle generations")
+        for file_path in file_paths:
+            file = disnake.File(file_path, filename=file_path)
+            await bot_send(ctx, file)
 
 
 def setup(bot):

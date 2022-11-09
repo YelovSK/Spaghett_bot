@@ -1,13 +1,14 @@
-import disnake
-import random
 import os
-
-from helpers.message_send import bot_send
-from helpers import checks
-from disnake.ext import commands
-from PIL import Image, ImageFont, ImageDraw
-from disnake.ext.commands import Context
+import random
 from os.path import join as pjoin
+
+import disnake
+from PIL import Image, ImageFont, ImageDraw
+from disnake.ext import commands
+from disnake.ext.commands import Context
+
+from helpers import checks
+from helpers.message_send import bot_send
 
 
 class Media(commands.Cog):
@@ -94,7 +95,7 @@ class Media(commands.Cog):
         await bot_send(ctx, file)
 
     @commands.command()
-    async def image(self, ctx: Context, img_name='', *, text=''):
+    async def image(self, ctx: Context, img_name: str = "", *, text: str = ""):
         """Puts text on an image. Lists images if no argument.
 
         Syntax: ```plz image [image] [text]```
@@ -138,7 +139,7 @@ class Media(commands.Cog):
         await self.send_file(ctx, "meme.png")
 
     @commands.command()
-    async def video(self, ctx: Context, *, video=''):
+    async def video(self, ctx: Context, *, video: str = ""):
         """Sends a video. Send with no argument for list of videos.
 
         Syntax: ```plz video [video_name]```

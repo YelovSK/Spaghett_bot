@@ -1,18 +1,19 @@
 import json
 import os
-import disnake
 import time
-
 from asyncio import run_coroutine_threadsafe as rct
-from helpers.message_send import bot_send
-from disnake.ext import commands
-from disnake.ext.commands import Context
-from disnake.ext.commands import Bot
 from os.path import join as pjoin
+
+import disnake
+from disnake.ext import commands
+from disnake.ext.commands import Bot
+from disnake.ext.commands import Context
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyClientCredentials
-from yt_dlp import YoutubeDL
 from youtubesearchpython import Video, VideosSearch
+from yt_dlp import YoutubeDL
+
+from helpers.message_send import bot_send
 
 with open("config.json") as cfg:
     config = json.load(cfg)
@@ -30,7 +31,7 @@ class Music(commands.Cog):
         self.link = None
         self.ctx = None
         self.song_queue = []
-        self.volume = 100
+        self.volume = 0.5
         self.ydl_opts = {
             "format": "bestaudio/best",
             "noplaylist": True,
@@ -53,11 +54,14 @@ class Music(commands.Cog):
             self.title = None
             self.link = None
             return
+
         self.link, self.title = self.song_queue.pop(0)
         await self.download_song()
+
         if self.voice.is_playing():
             self.voice.stop()
             time.sleep(1)  # file is still being used by voice
+
         await self.replace_song()
         await self.start_playing()
 
@@ -81,13 +85,16 @@ class Music(commands.Cog):
             link = text
             title = Video.get(text)["title"]
             self.song_queue.append((link, title))
+
         elif text.startswith("https://open.spotify.com/playlist/"):
             await self.add_songs_from_playlist(text)
+
         elif text.startswith("https://open.spotify.com/track/"):
             song = self.sp.track(text)
             artist = song["artists"][0]["name"]
             title = song["name"]
             await self.search_song(artist + " " + title)
+
         else:
             await self.search_song(text)
 
@@ -97,8 +104,10 @@ class Music(commands.Cog):
         while result["next"]:
             result = self.sp.next(result)
             tracks.extend(result["items"])
+
         tracks.reverse()
         await bot_send(self.ctx, f"Adding **{len(tracks)} songs** to queue")
+
         for item in tracks:
             artist = item["track"]["artists"][0]["name"]
             title = item["track"]["name"]
@@ -109,11 +118,13 @@ class Music(commands.Cog):
         result = custom_search.result()["result"][0]
         self.song_queue.append((result["link"], result["title"]))
 
-    async def delete_old_file(self):
+    @staticmethod
+    async def delete_old_file():
         if os.path.isfile(pjoin("folders", "send", "ytdl.mp3")):
             os.remove(pjoin("folders", "send", "ytdl.mp3"))
 
-    async def delete_curr_file(self):
+    @staticmethod
+    async def delete_curr_file():
         if os.path.isfile(pjoin("folders", "send", "song.mp3")):
             os.remove(pjoin("folders", "send", "song.mp3"))
 
@@ -127,7 +138,7 @@ class Music(commands.Cog):
             after=lambda e: rct(self.download_and_play_next(), self.bot.loop),
         )
         self.voice.source = disnake.PCMVolumeTransformer(
-            self.voice.source, volume=float(self.volume) / 100
+            self.voice.source, volume=self.volume
         )
         send_list = [
             f"Playing **{self.title}**",
@@ -153,8 +164,10 @@ class Music(commands.Cog):
         Example: ```plz play Rei I``` ```plz play https://www.youtube.com/watch?v=dQw4w9WgXcQ```
         """
         self.ctx = ctx
+
         await self.connect_voice()
         songs_added = await self.add_to_queue(url)
+
         if self.voice.is_playing() or self.voice.is_paused():
             if len(songs_added) == 1:
                 added_title = songs_added[0][1]
@@ -162,6 +175,7 @@ class Music(commands.Cog):
                 added_title = f"{len(songs_added)} songs"
             await bot_send(ctx, f"Added **{added_title}** to queue")
             return
+
         await self.download_and_play_next()
 
     @commands.command()
@@ -250,13 +264,16 @@ class Music(commands.Cog):
         """
         if not self.song_queue and not self.title:
             await bot_send(ctx, "The queue is empty")
+
         songs = [
             f"**Currently playing:** {self.title}",
-            *[f"**{i+1}.** {song[1]}" for i, song in enumerate(self.song_queue[:10])],
+            *[f"**{i + 1}.** {song[1]}" for i, song in enumerate(self.song_queue[:10])],
         ]
+
         songs_showed = 10
         if len(self.song_queue) > songs_showed:
             songs.append(f"**.. and {len(self.song_queue) - songs_showed} other songs**")
+
         await bot_send(ctx, "\n".join(songs))
 
     @commands.command()
@@ -283,6 +300,7 @@ class Music(commands.Cog):
             await bot_send(ctx, "Not connected")
         elif volume.isnumeric() and 0 <= int(volume) <= 100:
             self.voice.source.volume = float(volume) / 100
+            self.volume = float(volume) / 100
             await bot_send(ctx, f"Set volume to {volume}%")
         else:
             await bot_send(ctx, "Volume must be between <0, 100>")

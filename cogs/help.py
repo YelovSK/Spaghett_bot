@@ -1,7 +1,8 @@
 from typing import Optional, Set
-from disnake.ext import commands
-from disnake import Embed
+
 import disnake
+from disnake import Embed
+from disnake.ext import commands
 
 
 class HelpDropdown(disnake.ui.Select):
